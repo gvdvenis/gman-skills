@@ -16,3 +16,15 @@
 
 - Add optional persistence so the report and selected prompt fragments can be reloaded later.
 - Add scoring history so the system can learn from which suggestions were accepted.
+
+## Self-improvement report (ticket 15 and onwards)
+
+Detailed generation algorithm, dedup rules, ranking formula, and staging conflict flow:
+→ [`docs/self-improve-generation.md`](self-improve-generation.md)
+
+Schemas:
+- `telemetry/improvement-report-data-schema.json` — report data file schema (v1.1)
+- `telemetry/suggestion-history-schema.json` — CLI-owned cross-run history schema (v1.0)
+
+Example fixture:
+- `telemetry/improvement-report-data-example.json` — valid v1.1 instance with two dedup-folded findings

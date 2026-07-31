@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "suggestion-history",
+  "description": "CLI-owned cross-run suggestion history. Stored at ~/.copilot/blazor-orchestration/suggestion-history.json. Append-only records of user decisions for suggestion_key-based dedup weighting and dismissal penalty application. Never committed to source control — local machine only.",
+  "type": "object",
+  "required": ["schema_version", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Schema version for the history file itself."
+    },
+    "entries": {
+      "type": "array",
+      "description": "Append-only ordered list of user decision records. Each record corresponds to one user action on a suggestion_key in a given run.",
+      "items": {
+        "$ref": "#/definitions/history_entry"
+      }
+    }
+  },
+  "definitions": {
+    "history_entry": {
+      "type": "object",
+      "description": "One append-only decision record. Never mutated after append.",
+      "required": ["suggestion_key", "action", "run_id", "decided_at"],
+      "additionalProperties": false,
+      "properties": {
+        "suggestion_key": {
+          "type": "string",
+          "description": "Deterministic identity key for the suggestion. Derived from normalized intent + target surface + proposed change shape. See docs/self-improve-generation.md for key derivation rules."
+        },
+        "action": {
+          "type": "string",
+          "enum": ["accepted", "dismissed", "never_again"],
+          "description": "'accepted': user queued and shipped. 'dismissed': user dismissed with optional cooldown. 'never_again': user permanently suppressed this suggestion key."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Run ID of the run in which this decision was made."
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the decision was recorded."
+        },
+        "dismissed_reason": {
+          "type": "string",
+          "description": "Optional free-text reason provided by the user at dismissal time."
+        },
+        "specialist": {
+          "type": "string",
+          "description": "Specialist lane that surfaced the finding in the referenced run."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["tool_use", "planning", "output_quality", "validation", "communication"],
+          "description": "Category of the finding at the time of decision. Informational only; weighting uses suggestion_key, not category."
+        }
+      }
+    }
+  }
+}

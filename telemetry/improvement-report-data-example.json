@@ -1,0 +1,87 @@
+{
+  "$schema": "../telemetry/improvement-report-data-schema.json",
+  "schema_version": "1.1",
+  "generated_at": "2026-08-01T00:15:00Z",
+  "origin": {
+    "skill_id": "blazor-component-architect",
+    "skill_scope": "user",
+    "skill_path": "C:/Users/g.vd.venis/.agents/skills/blazor-component-architect",
+    "repo_root": "C:/Users/g.vd.venis/source/repos/my-blazor-app",
+    "run_id": "run-20260801-0215"
+  },
+  "findings": [
+    {
+      "id": "f-001",
+      "suggestion_key": "tool_use:read-before-edit:always-view-target-file",
+      "specialist": "blazor-component-architect",
+      "title": "View target file before every edit",
+      "summary": "The specialist issued an edit to Checkout.razor without first calling view to confirm the current file state. This risks generating a diff conflict on a stale base and wastes a review cycle.",
+      "category": "tool_use",
+      "severity": "high",
+      "expected_impact": "Eliminates stale-base edit errors and reduces review-cycle churn by roughly one pass per affected file.",
+      "prompt_fragment": "Before issuing any edit tool call, always call view on the target file first to confirm the current content. Do not assume content from prior context is still accurate.",
+      "evidence": [
+        {
+          "specialist": "blazor-component-architect",
+          "issue_index": 0,
+          "run_id": "run-20260801-0215",
+          "run_timestamp": "2026-08-01T00:15:00Z"
+        },
+        {
+          "specialist": "blazor-component-architect",
+          "issue_index": 1,
+          "run_id": "run-20260731-1842",
+          "run_timestamp": "2026-07-31T18:42:00Z"
+        }
+      ],
+      "recurrence_count": 2,
+      "first_seen": "2026-07-31T18:42:00Z",
+      "last_seen": "2026-08-01T00:15:00Z",
+      "ranking_score": 3.2
+    },
+    {
+      "id": "f-002",
+      "suggestion_key": "planning:scope-check:confirm-lane-before-delegating",
+      "specialist": "blazor-component-architect",
+      "title": "Confirm lane scope before delegation",
+      "summary": "The specialist accepted a task that partially overlapped the form-specialist lane (validation logic) without flagging the boundary. This led to the orchestrator needing to re-route mid-run.",
+      "category": "planning",
+      "severity": "medium",
+      "expected_impact": "Reduces mid-run re-routing and keeps specialist work bounded to the declared lane contract.",
+      "prompt_fragment": "Before starting implementation, explicitly check whether the task touches any adjacent lane (forms, data-fetching, auth). If it does, surface the overlap in your opening summary and await orchestrator confirmation before proceeding.",
+      "evidence": [
+        {
+          "specialist": "blazor-component-architect",
+          "issue_index": 2
+        }
+      ],
+      "recurrence_count": 1,
+      "first_seen": "2026-08-01T00:15:00Z",
+      "last_seen": "2026-08-01T00:15:00Z",
+      "ranking_score": 2.0
+    },
+    {
+      "id": "f-003",
+      "suggestion_key": "output_quality:token-efficiency:avoid-full-file-rewrite",
+      "specialist": "blazor-component-architect",
+      "title": "Avoid full-file rewrites for targeted changes",
+      "summary": "Two edits were applied by rewriting an entire 120-line component when only 8 lines changed. This bloats output tokens and makes diffs harder to review.",
+      "category": "output_quality",
+      "severity": "low",
+      "expected_impact": "Reduces output tokens and makes generated diffs self-evident without full-file context.",
+      "prompt_fragment": "Prefer surgical edits using old_str/new_str targeting only the changed lines. Only rewrite an entire file when the majority of lines are affected or when the file is short (< 30 lines).",
+      "evidence": [
+        {
+          "specialist": "blazor-component-architect",
+          "issue_index": 3
+        }
+      ],
+      "recurrence_count": 1,
+      "first_seen": "2026-08-01T00:15:00Z",
+      "last_seen": "2026-08-01T00:15:00Z",
+      "ranking_score": 1.0
+    }
+  ],
+  "decisions": {},
+  "shipped_prompt": null
+}

@@ -1,0 +1,207 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "improvement-report-data",
+  "description": "Schema version 1.1. Written by the CLI orchestrator at run time under --self-improve. Accumulates user decisions and shipped prompt via C# server write-back. Intended for staging and commit alongside implementation changes.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "origin", "findings", "decisions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.1",
+      "description": "Schema version. Must be '1.1' for this revision."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of initial file generation by the CLI orchestrator."
+    },
+    "origin": {
+      "type": "object",
+      "description": "Provenance block written by the orchestrator at generation time. Disambiguates user-level vs repo-level skill installs and records the on-disk skill path so shipped prompts are self-contained.",
+      "required": ["skill_id", "skill_scope", "skill_path", "repo_root", "run_id"],
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "type": "string",
+          "description": "Canonical skill identifier (e.g. 'blazor-component-architect')."
+        },
+        "skill_scope": {
+          "type": "string",
+          "enum": ["repo", "user"],
+          "description": "'repo' takes precedence when both scopes exist at the same skill_id."
+        },
+        "skill_path": {
+          "type": "string",
+          "description": "Absolute on-disk path to the skill directory at generation time."
+        },
+        "repo_root": {
+          "type": "string",
+          "description": "Absolute path to the git repository root from which the run was invoked."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Run identifier (format: run-YYYYMMDD-HHMM). Matches the run directory name."
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "description": "Ordered improvement findings. Written once at generation time and immutable thereafter. Cross-run dedup is applied CLI-side before this array is written; each entry represents one collapsed suggestion_key.",
+      "items": {
+        "$ref": "#/definitions/finding"
+      }
+    },
+    "decisions": {
+      "type": "object",
+      "description": "User decisions keyed by finding id. Empty object at generation time. Written by the C# server in response to user gestures (POST /api/dismissals, POST /api/ship-prompt). Presence of any key here is a CLI staging readiness signal.",
+      "additionalProperties": {
+        "$ref": "#/definitions/decision"
+      }
+    },
+    "shipped_prompt": {
+      "type": ["object", "null"],
+      "description": "Written by the C# server when POST /api/ship-prompt completes. null at generation time. Presence of this field is a CLI staging readiness signal.",
+      "required": ["readable", "transformed", "shipped_at"],
+      "additionalProperties": false,
+      "properties": {
+        "readable": {
+          "type": "string",
+          "description": "Browser-assembled readable prompt including origin preamble."
+        },
+        "transformed": {
+          "type": "string",
+          "description": "Server-transformed LLM-optimised output from the compression middleware chain."
+        },
+        "shipped_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the prompt was shipped."
+        }
+      }
+    }
+  },
+  "definitions": {
+    "finding": {
+      "type": "object",
+      "description": "One improvement finding after CLI-side cross-run dedup fold.",
+      "required": ["id", "specialist", "title", "summary", "category", "severity", "expected_impact", "prompt_fragment", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable finding identifier within this run (e.g. 'f-001'). Used as key in the decisions map."
+        },
+        "suggestion_key": {
+          "type": "string",
+          "description": "Deterministic cross-run identity key. Derived from normalized intent + target surface + proposed change shape; volatile wording and scores excluded. See docs/self-improve-generation.md for derivation rules."
+        },
+        "specialist": {
+          "type": "string",
+          "description": "Lane name of the specialist that surfaced this finding (e.g. 'blazor-component-architect')."
+        },
+        "title": {
+          "type": "string",
+          "description": "Short human-readable title. Latest-run value wins on dedup fold."
+        },
+        "summary": {
+          "type": "string",
+          "description": "1-3 sentence explanation of the weakness or gap. Latest-run value wins on dedup fold."
+        },
+        "category": {
+          "type": "string",
+          "enum": ["tool_use", "planning", "output_quality", "validation", "communication"],
+          "description": "Functional category. Findings are grouped by category in the HTML report."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "description": "Pre-derived severity. Max across all occurrences on dedup fold. Derivation is upstream (ticket-14 scope); this schema does not define the algorithm."
+        },
+        "expected_impact": {
+          "type": "string",
+          "description": "1-2 sentence description of the expected improvement if the prompt fragment is adopted. Latest-run value wins on dedup fold."
+        },
+        "prompt_fragment": {
+          "type": "string",
+          "description": "Concrete prompt text the user can queue and ship. Latest-run value wins on dedup fold."
+        },
+        "evidence": {
+          "type": "array",
+          "description": "Evidence union across all dedup-folded occurrences. Each item is annotated with its run context.",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/evidence_item"
+          }
+        },
+        "recurrence_count": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Number of distinct runs in which this suggestion_key appeared. 1 for first-seen findings. Present when dedup history is available."
+        },
+        "first_seen": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of the earliest run in which this suggestion_key appeared."
+        },
+        "last_seen": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of the most recent run in which this suggestion_key appeared."
+        },
+        "ranking_score": {
+          "type": "number",
+          "description": "Composite ranking score: base_severity_weight + recurrence_boost + history_weight. Used to order findings within their severity group. Visible in HTML for explainability."
+        }
+      }
+    },
+    "evidence_item": {
+      "type": "object",
+      "description": "Pointer to a self_diagnosis entry in a specialist report, optionally annotated with run context for dedup-folded evidence unions.",
+      "required": ["specialist", "issue_index"],
+      "additionalProperties": false,
+      "properties": {
+        "specialist": {
+          "type": "string",
+          "description": "Lane name of the specialist that emitted the evidence."
+        },
+        "issue_index": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Zero-based index into the specialist's self_diagnosis.issues array."
+        },
+        "run_id": {
+          "type": "string",
+          "description": "Run ID of the occurrence that produced this evidence. Populated for dedup-folded records; omitted for single-run findings."
+        },
+        "run_timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "generated_at timestamp of the run that produced this evidence. Populated for dedup-folded records."
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "description": "User decision record written by the C# server.",
+      "required": ["action", "decided_at"],
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["queued", "dismissed", "skipped"],
+          "description": "'queued': finding was included in shipped prompt. 'dismissed': user dismissed. 'skipped': user passed over without action."
+        },
+        "dismissed_reason": {
+          "type": "string",
+          "description": "Optional free-text reason provided by the user on dismissal."
+        },
+        "decided_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the decision was recorded."
+        }
+      }
+    }
+  }
+}
