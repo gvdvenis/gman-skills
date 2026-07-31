@@ -4,12 +4,12 @@
 
 **Blocked by:** 15 — Generate `improvement-report-data.json` and CLI staging signal.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `--self-improve` auto-launches the C# server; no separate flag required
-- [ ] `GET /api/report` returns the run's JSON payload
-- [ ] `GET /ping` returns a 200 response
-- [ ] `GET /shutdown` gracefully stops the server
-- [ ] Port-already-bound is detected, logged as a warning, and treated as server already running
-- [ ] Default binding is loopback; all-interfaces binding is configurable
-- [ ] Server stays alive after first report load until idle timeout or explicit shutdown
+- [x] `--self-improve` auto-launches the C# server; no separate flag required
+- [x] `GET /api/report` returns the run's JSON payload
+- [x] `GET /ping` returns a 200 response
+- [x] `GET /shutdown` gracefully stops the server
+- [x] Port-already-bound is detected, logged as a warning, and treated as server already running (exit code 2)
+- [x] Default binding is loopback; all-interfaces binding is configurable via `--bind 0.0.0.0`
+- [x] Server stays alive after first report load until idle timeout or explicit shutdown

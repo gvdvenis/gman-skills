@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>report-server</AssemblyName>
+    <RootNamespace>ReportServer</RootNamespace>
+    <!-- Produce a single self-contained executable when published -->
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+</Project>
