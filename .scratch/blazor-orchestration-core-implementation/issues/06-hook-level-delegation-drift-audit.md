@@ -4,8 +4,8 @@
 
 **Blocked by:** 03 — Expand lanes and routing explanations.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Delegation events outside orchestrator flow are detected and recorded with enough context to diagnose drift.
-- [ ] Legitimate orchestrator-managed delegation does not produce false drift flags under normal routed execution.
+- [x] Delegation events outside orchestrator flow are detected and recorded with enough context to diagnose drift.
+- [x] Legitimate orchestrator-managed delegation does not produce false drift flags under normal routed execution.
 

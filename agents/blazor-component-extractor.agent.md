@@ -24,5 +24,4 @@ form redesign. Report adjacent needs to the orchestrator instead.
 ## Completion
 
 The parent is simpler, each extracted component has one responsibility, and the report identifies
-files changed and validation performed. Return the JSON shape in
-`telemetry/feedback-report-template.json`; include `self_diagnosis` only with `--self-improve`.
+files changed and validation performed. Return a strict JSON report matching `telemetry/feedback-report-template.json` schema v1.0. Include `self_diagnosis` only when `--self-improve` is active.

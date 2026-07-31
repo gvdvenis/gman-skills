@@ -24,5 +24,4 @@ authentication, prerendering, or JavaScript interop.
 ## Completion
 
 Inputs bind correctly, validation and submit behavior are explicit, and the report identifies files
-changed and validation performed. Return the JSON shape in
-`telemetry/feedback-report-template.json`; include `self_diagnosis` only with `--self-improve`.
+changed and validation performed. Return a strict JSON report matching `telemetry/feedback-report-template.json` schema v1.0. Include `self_diagnosis` only when `--self-improve` is active.

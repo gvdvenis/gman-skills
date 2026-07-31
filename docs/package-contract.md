@@ -63,15 +63,16 @@ Specialists:
 Each run uses a unique `<run_id>` and writes locally to:
 
 ```text
-.copilot/blazor-orchestration/runs/<run_id>/
+~/.copilot/blazor-orchestration/runs/<run_id>/
   events.jsonl
   reports/<agent-id>.json
   analysis.json
   reports/self-improvement-report.html
 ```
 
-The HTML report is optional and is created only with `--self-improve`. Repository content,
-credentials, and prompts are not sent to third-party services by this package.
+Artifacts are stored in the user-level Copilot directory, not the target repository. The HTML
+report is optional and is created only with `--self-improve`. Repository content, credentials, and
+prompts are not sent to third-party services by this package.
 
 ## Contract ownership
 

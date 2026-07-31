@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "specialist": "blazor-component-architect",
+  "status": "success",
+  "summary": "Extracted OrderSummaryCard and PaymentMethodPicker from Checkout.razor and replaced inline markup with parameterized components.",
+  "files_changed": [
+    { "path": "src/Web/Pages/Checkout.razor", "change": "updated", "reason": "Replaced duplicated markup with component usage." },
+    { "path": "src/Web/Components/OrderSummaryCard.razor", "change": "created", "reason": "New reusable summary display component." },
+    { "path": "src/Web/Components/PaymentMethodPicker.razor", "change": "created", "reason": "New reusable payment method selector." }
+  ],
+  "validation": {
+    "performed": true,
+    "commands": ["dotnet build src/Web/Web.csproj", "dotnet test tests/Web.Tests/Web.Tests.csproj --filter Checkout"],
+    "result": "pass",
+    "evidence": "Build succeeded; 6/6 Checkout tests passed."
+  },
+  "next_action": "Orchestrator can proceed to telemetry artifact generation and final user handoff.",
+  "token_estimate": { "input": 2200, "output": 900, "total": 3100 }
+}

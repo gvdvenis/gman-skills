@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "analysis",
+  "description": "Orchestrator end-of-run summary written to analysis.json once the run completes.",
+  "type": "object",
+  "required": ["run_id", "timestamp", "orchestrator_id", "lanes_executed", "overall_status", "run_directory"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "Unique identifier for the run (format: run-YYYYMMDD-HHMM)."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the analysis was written."
+    },
+    "orchestrator_id": {
+      "type": "string",
+      "const": "blazor-orchestrator"
+    },
+    "lanes_executed": {
+      "type": "array",
+      "description": "List of lane identifiers that were executed during the run.",
+      "items": { "type": "string" }
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": ["success", "partial", "failed", "review_unresolved"],
+      "description": "Aggregate outcome of the run."
+    },
+    "review_findings": {
+      "type": "array",
+      "description": "Populated only when overall_status is 'review_unresolved'. Each item describes an unresolved code-review finding.",
+      "items": {
+        "type": "object",
+        "required": ["lane", "file", "severity", "description"],
+        "properties": {
+          "lane":        { "type": "string" },
+          "file":        { "type": "string" },
+          "line_range":  { "type": "string", "description": "e.g. '42-57'. Omit when line range is unavailable." },
+          "severity":    { "type": "string", "enum": ["error", "warning", "advisory"] },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Populated only with --self-improve. Ranked improvement suggestions from the improvement analyzer.",
+      "items": { "type": "string" }
+    },
+    "run_directory": {
+      "type": "string",
+      "description": "Absolute path to the run artifact directory under the user-level Copilot directory.",
+      "example": "~/.copilot/blazor-orchestration/runs/<run_id>/"
+    }
+  }
+}

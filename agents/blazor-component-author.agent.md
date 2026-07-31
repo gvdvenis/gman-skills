@@ -24,5 +24,4 @@ transport, shared state, authentication, or JavaScript interop.
 ## Completion
 
 The component has a clear responsibility and explicit API, with no unnecessary service coupling.
-Return the JSON shape in `telemetry/feedback-report-template.json`; include `self_diagnosis` only
-with `--self-improve`.
+Return a strict JSON report matching `telemetry/feedback-report-template.json` schema v1.0. Include `self_diagnosis` only when `--self-improve` is active.

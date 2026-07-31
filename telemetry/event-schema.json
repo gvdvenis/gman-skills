@@ -1,26 +1,42 @@
 {
-  "version": 1,
+  "version": 2,
   "events": {
     "dispatch": {
+      "mandatory": true,
       "required": ["run_id", "timestamp", "orchestrator_id", "agent_id", "lane", "task_summary"]
     },
-    "tool_use": {
-      "required": ["run_id", "timestamp", "agent_id", "tool", "purpose", "tokens_estimate"]
-    },
-    "tool_missed": {
-      "required": ["run_id", "timestamp", "agent_id", "suspected_tool", "reason", "severity"]
-    },
-    "handoff": {
-      "required": ["run_id", "timestamp", "from", "to", "reason"]
-    },
     "completion": {
+      "mandatory": true,
       "required": ["run_id", "timestamp", "agent_id", "lane", "outcome", "notes"]
     },
-    "feedback": {
-      "required": ["run_id", "timestamp", "agent_id", "category", "severity", "message"]
+    "review_loop_stopped": {
+      "mandatory": true,
+      "note": "Mandatory when the review loop ends with unresolved actionable findings.",
+      "required": ["run_id", "timestamp", "lane", "cycles_completed", "unresolved_findings_count"]
     },
     "analysis": {
+      "mandatory": true,
       "required": ["run_id", "timestamp", "orchestrator_id", "summary", "recommendations"]
+    },
+    "handoff": {
+      "mandatory": true,
+      "note": "Mandatory when a lane transition occurs.",
+      "required": ["run_id", "timestamp", "from", "to", "reason"]
+    },
+    "tool_use": {
+      "mandatory": false,
+      "note": "Best-effort. Valuable but the harness does not always surface tool names.",
+      "required": ["run_id", "timestamp", "agent_id", "tool", "purpose", "tokens_estimate"]
+    },
+    "feedback": {
+      "mandatory": false,
+      "note": "Best-effort. Only emitted when a specialist raises an issue.",
+      "required": ["run_id", "timestamp", "agent_id", "category", "severity", "message"]
+    },
+    "tool_missed": {
+      "mandatory": false,
+      "note": "Conditional. Emitted only when the specialist explicitly identifies a missed tool in self_diagnosis.issues under --self-improve. Never inferred from silence. Severity is always 'advisory'. Never blocks the run.",
+      "required": ["run_id", "timestamp", "agent_id", "suspected_tool", "reason", "severity"]
     }
   }
 }
