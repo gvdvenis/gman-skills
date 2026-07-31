@@ -21,6 +21,11 @@ tools: ['read', 'search', 'edit']
 Do not redesign unrelated components, implement API/data-fetching architecture, shared state,
 authentication, prerendering, or JavaScript interop.
 
+## Fluent UI constraint
+
+When Fluent UI components, providers, or theming are in scope, apply the `fluentui-blazor` skill
+alongside this lane. See `docs/routing-classifier.md` — "Fluent UI constraint layer".
+
 ## Completion
 
 Inputs bind correctly, validation and submit behavior are explicit, and the report identifies files

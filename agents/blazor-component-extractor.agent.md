@@ -21,6 +21,11 @@ tools: ['read', 'search', 'edit']
 Do not add API/data access, authentication, JavaScript interop, shared state services, or unrelated
 form redesign. Report adjacent needs to the orchestrator instead.
 
+## Fluent UI constraint
+
+When Fluent UI components, providers, or theming are in scope, apply the `fluentui-blazor` skill
+alongside this lane. See `docs/routing-classifier.md` — "Fluent UI constraint layer".
+
 ## Completion
 
 The parent is simpler, each extracted component has one responsibility, and the report identifies

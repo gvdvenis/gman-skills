@@ -39,8 +39,19 @@ If either condition is not met, delegate serially.
 | Implement a feature end-to-end | Depends on scope | Delegate | Multi-file; isolation benefit |
 | Review and refactor a page | component-extractor + review | Delegate (serial) | Multi-concern; always delegate |
 | Full feature spanning authoring + forms | component-author → form-specialist | Delegate serial or parallel | Parallel only if independent |
+| Full feature spanning forms + data fetching | form-specialist → data-fetching-specialist | Delegate serial | Form layer must complete before data contract is finalised |
+| Fetch data from API / register HttpClient / service abstraction | data-fetching-specialist | Delegate | Reading + writing service layer files |
+| Add loading / error / empty states to a page or component | data-fetching-specialist | Delegate | Isolation protects review-sensitive data contract work |
+| Full feature spanning authoring + data fetching | component-author → data-fetching-specialist | Delegate serial or parallel | Parallel only if file sets are independent |
 | Narrow file edit with clear boundary | Inline | Inline | Single lane, ≤ 2 files confirmed |
 | Lane selection uncertain | — | Delegate | Apply ambiguous default |
+
+## Fluent UI constraint layer
+
+Fluent UI is **not a lane**. It is a cross-lane constraint applied alongside the selected primary
+lane whenever Fluent components, providers, or theming are in scope. Invoke the `fluentui-blazor`
+skill as an overlay on top of whichever specialist is active. Do not route Fluent UI work to a
+dedicated agent.
 
 ## Override recording
 

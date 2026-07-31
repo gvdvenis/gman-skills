@@ -21,6 +21,11 @@ tools: ['read', 'search', 'edit']
 Do not refactor an existing page, implement forms or validation as the primary task, add data
 transport, shared state, authentication, or JavaScript interop.
 
+## Fluent UI constraint
+
+When Fluent UI components, providers, or theming are in scope, apply the `fluentui-blazor` skill
+alongside this lane. See `docs/routing-classifier.md` — "Fluent UI constraint layer".
+
 ## Completion
 
 The component has a clear responsibility and explicit API, with no unnecessary service coupling.

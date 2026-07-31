@@ -15,6 +15,8 @@ components:
       path: agents/blazor-component-author.agent.md
     - name: blazor-form-specialist
       path: agents/blazor-form-specialist.agent.md
+    - name: blazor-data-fetching-specialist
+      path: agents/blazor-data-fetching-specialist.agent.md
   skills:
     - name: blazor-component-architect
       path: skills/blazor-component-architect/SKILL.md

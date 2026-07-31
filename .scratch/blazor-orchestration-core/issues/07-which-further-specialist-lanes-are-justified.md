@@ -1,7 +1,7 @@
 # Which further specialist lanes are justified
 
 Type: grilling
-Status: resolved
+Status: done
 Assignee: @gvdvenis
 Blocked by: 03
 

@@ -2,8 +2,9 @@
 name: blazor-orchestrator
 description: >
   Route a full Blazor work request across the appropriate specialist lane(s). Use when the request
-  spans more than one concern (authoring, data, auth, review) or when lane selection itself is
-  uncertain. For a single, narrow authoring task, invoke the component or data specialist directly.
+  spans more than one concern (authoring, data fetching, forms, review) or when lane selection
+  itself is uncertain. For a single, narrow task, invoke the appropriate specialist directly:
+  component-author, component-extractor, form-specialist, or data-fetching-specialist.
 tools: ['read', 'search', 'edit', 'task', 'skill']
 ---
 
