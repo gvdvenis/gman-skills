@@ -4,12 +4,10 @@
 
 **Blocked by:** 16 — Fixed-port C# server startup and lifecycle.
 
-**Status:** ready-for-agent
-
-- [ ] HTML shell loads and fetches data from `GET /api/report`
-- [ ] Findings are rendered in severity-grouped cards (high → medium → low)
-- [ ] One-click add/remove queues a finding into the prompt workspace
-- [ ] Readable prompt assembles live from queued findings including origin preamble
-- [ ] "Copy prompt (readable)" writes via browser clipboard API
-- [ ] "Copy for LLM" button renders but is inactive until ship-prompt is wired
-- [ ] Both copy buttons only appear when the queue is non-empty
+**Status:** done
+- [x] Findings are rendered in severity-grouped cards (high → medium → low)
+- [x] One-click add/remove queues a finding into the prompt workspace
+- [x] Readable prompt assembles live from queued findings including origin preamble
+- [x] "Copy prompt (readable)" writes via browser clipboard API
+- [x] "Copy for LLM" button renders but is inactive until ship-prompt is wired
+- [x] Both copy buttons only appear when the queue is non-empty

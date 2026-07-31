@@ -4,13 +4,13 @@
 
 **Blocked by:** 17 — Report HTML shell: severity-grouped findings, queue, and dual copy.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `POST /api/ship-prompt` accepts the assembled readable prompt body
-- [ ] Syntactic compression runs two deterministic passes (strip markdown, collapse whitespace)
-- [ ] Compressed result is persisted to `shipped_prompt` in `improvement-report-data.json` atomically
-- [ ] `shipped_prompt` includes `readable`, `transformed`, and `shipped_at` fields
-- [ ] Desktop clipboard receives the compressed output
-- [ ] Response body includes the transformed prompt and any `warnings`
-- [ ] Pipeline step failure passes through unchanged prompt; persist and clipboard still run
-- [ ] "Copy for LLM" button in the UI is active and calls this endpoint
+- [x] `POST /api/ship-prompt` accepts the assembled readable prompt body
+- [x] Syntactic compression runs two deterministic passes (strip markdown, collapse whitespace)
+- [x] Compressed result is persisted to `shipped_prompt` in `improvement-report-data.json` atomically
+- [x] `shipped_prompt` includes `readable`, `transformed`, and `shipped_at` fields
+- [x] Desktop clipboard receives the compressed output
+- [x] Response body includes the transformed prompt and any `warnings`
+- [x] Pipeline step failure passes through unchanged prompt; persist and clipboard still run
+- [x] "Copy for LLM" button in the UI is active and calls this endpoint

@@ -4,10 +4,10 @@
 
 **Blocked by:** 17 — Report HTML shell, 18 — `POST /api/dismissals` and atomic decisions write-back.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] Report is fully interactive (add/remove queue, dismiss, copy) at ≥375px viewport width
-- [ ] Prompt workspace is collapsible on mobile with a full-screen edit overlay
-- [ ] QR code for the fixed-port URL prints to the terminal when all-interfaces binding is active
-- [ ] JS polling keeps the mobile view current without a manual refresh
-- [ ] `file://` usage triggers a visible degraded-state banner with server-path guidance
+- [x] Report is fully interactive (add/remove queue, dismiss, copy) at ≥375px viewport width
+- [x] Prompt workspace is collapsible on mobile with a full-screen edit overlay
+- [x] QR code for the fixed-port URL prints to the terminal when all-interfaces binding is active
+- [x] JS polling keeps the mobile view current without a manual refresh
+- [x] `file://` usage triggers a visible degraded-state banner with server-path guidance

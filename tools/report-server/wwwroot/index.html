@@ -137,6 +137,7 @@
       display: inline-block;
     }
 
+    .severity-label.critical { background: #4c0519; color: #fca5a5; }
     .severity-label.high   { background: #3b1219; color: #f87171; }
     .severity-label.medium { background: #2c1e0a; color: #fb923c; }
     .severity-label.low    { background: #162032; color: #60a5fa; }
@@ -407,7 +408,7 @@
 (function () {
   'use strict';
 
-  const SEVERITY_ORDER = ['high', 'medium', 'low'];
+  const SEVERITY_ORDER = ['critical', 'high', 'medium', 'low'];
 
   let reportData = null;
   const queue = new Set();   // finding ids
@@ -484,8 +485,8 @@
   function isDismissedFinding(decisions, id) {
     const dec = decisions?.[id];
     if (!dec) return false;
-    const status = (dec.status ?? '').toLowerCase();
-    return status === 'dismissed' || status === 'reject' || status === 'rejected';
+    const action = (dec.action ?? '').toLowerCase();
+    return action === 'dismissed';
   }
 
   function groupBySeverity(findings) {
@@ -651,8 +652,8 @@
     try {
       const res = await fetch('/api/ship-prompt', {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: promptText
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: promptText, queued_ids: Array.from(queue) })
       });
       const data = await res.json();
       const btn = document.getElementById('copy-llm');

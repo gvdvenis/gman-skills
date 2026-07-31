@@ -4,10 +4,10 @@
 
 **Blocked by:** 19 — `POST /api/ship-prompt` middleware chain, 20 — Mobile/small-screen interactions and QR access.
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] No reference to `report-input.json` remains in docs or test fixtures (canonical: `improvement-report-data.json`)
-- [ ] No reference to `POST /clipboard` remains (canonical: `POST /api/ship-prompt`)
-- [ ] No reference to `--serve` flag remains (canonical: `--self-improve` auto-launch)
-- [ ] Contract fixtures in tests match schema version `1.1` and the normalized endpoint surface
-- [ ] Spec cross-references in map and decision files point to the correct final names
+- [x] No reference to `report-input.json` remains in docs or test fixtures (canonical: `improvement-report-data.json`)
+- [x] No reference to `POST /clipboard` remains (canonical: `POST /api/ship-prompt`)
+- [x] No reference to `--serve` flag remains (canonical: `--self-improve` auto-launch)
+- [x] Contract fixtures in tests match schema version `1.1` and the normalized endpoint surface
+- [x] Spec cross-references in map and decision files point to the correct final names

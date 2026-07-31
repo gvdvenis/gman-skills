@@ -4,11 +4,11 @@
 
 **Blocked by:** 16 — Fixed-port C# server startup and lifecycle.
 
-**Status:** ready-for-agent
+**Status:** done
 
 - [x] `POST /api/dismissals` accepts a finding id and optional dismissed_reason
 - [x] Server writes `decisions` map to `improvement-report-data.json` atomically (temp-rename)
 - [x] Write is idempotent — re-dismissing an already-dismissed finding is a no-op
 - [x] Written decisions link to the CLI's cross-run history store so dismissed keys are deprioritized
-- [ ] UI reflects dismissed state after the response returns
+- [x] UI reflects dismissed state after the response returns
 - [x] `decided_at` timestamp is set on the decision record

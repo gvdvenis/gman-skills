@@ -87,6 +87,9 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
         return Results.BadRequest(new { ok = false, error = "id is required" });
 
     var decidedAt = DateTime.UtcNow.ToString("O");
+    var suggestionKey = "";
+    var isDuplicate = false;
+    string? priorDecidedAt = null;  // set when already dismissed; used as the echoed timestamp
 
     await reportLock.WaitAsync(ctx.RequestAborted);
     try
@@ -95,10 +98,14 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
         var doc  = JsonNode.Parse(raw)?.AsObject()
                    ?? throw new InvalidOperationException("report root is not an object");
 
-        // Validate finding exists
+        // Validate finding exists and capture suggestion_key inside the lock
         var findings = doc["findings"]?.AsArray();
         if (findings is null || !findings.Any(f => f?["id"]?.GetValue<string>() == req.Id))
             return Results.NotFound(new { ok = false, error = "finding not found" });
+
+        suggestionKey = findings
+            .FirstOrDefault(f => f?["id"]?.GetValue<string>() == req.Id)
+            ?["suggestion_key"]?.GetValue<string>() ?? "";
 
         // Ensure decisions map exists
         if (doc["decisions"] is not JsonObject decisions)
@@ -107,38 +114,36 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
             doc["decisions"] = decisions;
         }
 
-        // Idempotent: skip write if already dismissed
+        // Idempotent: if already dismissed, skip report write but fall through to refresh history
         var existing = decisions[req.Id]?.AsObject();
-        if (existing?["status"]?.GetValue<string>() == "dismissed")
-            return Results.Ok(new { ok = true, id = req.Id, decided_at = existing["decided_at"]?.GetValue<string>() });
-
-        decisions[req.Id] = new JsonObject
+        if (existing?["action"]?.GetValue<string>() == "dismissed")
         {
-            ["status"]           = "dismissed",
-            ["dismissed_reason"] = req.DismissedReason ?? "",
-            ["decided_at"]       = decidedAt
-        };
+            isDuplicate = true;
+            priorDecidedAt = existing["decided_at"]?.GetValue<string>();
+            // No report write needed; history refresh still runs below
+        }
+        else
+        {
+            var decisionNode = new JsonObject
+            {
+                ["action"]     = "dismissed",
+                ["decided_at"] = decidedAt
+            };
+            // Only set dismissed_reason when provided — omitting it avoids conflating "not provided" with "empty"
+            if (!string.IsNullOrEmpty(req.DismissedReason))
+                decisionNode["dismissed_reason"] = req.DismissedReason;
 
-        // Atomic write
-        var tmp = Path.Combine(Path.GetDirectoryName(reportPath)!, Path.GetRandomFileName());
-        await File.WriteAllTextAsync(tmp, doc.ToJsonString(jsonWriteOptions), ctx.RequestAborted);
-        File.Move(tmp, reportPath, overwrite: true);
+            decisions[req.Id] = decisionNode;
+
+            // Atomic write
+            var tmp = Path.Combine(Path.GetDirectoryName(reportPath)!, Path.GetRandomFileName());
+            await File.WriteAllTextAsync(tmp, doc.ToJsonString(jsonWriteOptions), ctx.RequestAborted);
+            File.Move(tmp, reportPath, overwrite: true);
+        }
     }
     finally { reportLock.Release(); }
 
-    // Cross-run history write
-    var suggestionKey = "";
-    try
-    {
-        var raw2     = await File.ReadAllTextAsync(reportPath, ctx.RequestAborted);
-        var doc2     = JsonNode.Parse(raw2)?.AsObject();
-        var findings2 = doc2?["findings"]?.AsArray();
-        suggestionKey = findings2?
-            .FirstOrDefault(f => f?["id"]?.GetValue<string>() == req.Id)
-            ?["suggestion_key"]?.GetValue<string>() ?? "";
-    }
-    catch { /* best-effort */ }
-
+    // Cross-run history write — always refresh dismissed_at so the 30-day cooldown anchors to the most recent dismissal
     if (!string.IsNullOrEmpty(suggestionKey))
     {
         await historyLock.WaitAsync(CancellationToken.None);
@@ -153,18 +158,26 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
             }
             else history = new JsonArray();
 
-            var alreadyPresent = history.Any(e => e?["suggestion_key"]?.GetValue<string>() == suggestionKey);
-            if (!alreadyPresent)
+            var existingEntry = history.FirstOrDefault(e => e?["suggestion_key"]?.GetValue<string>() == suggestionKey);
+            // Use the stored timestamp for duplicates (to honour what's in the report) or current time for first dismissal.
+            var historyTimestamp = isDuplicate ? (priorDecidedAt ?? decidedAt) : decidedAt;
+            if (existingEntry is JsonObject existingObj)
+            {
+                // Refresh dismissed_at so the 30-day cooldown window is anchored to the most recent dismissal
+                existingObj["dismissed_at"] = historyTimestamp;
+            }
+            else
             {
                 history.Add(new JsonObject
                 {
                     ["suggestion_key"] = suggestionKey,
-                    ["dismissed_at"]   = decidedAt
+                    ["dismissed_at"]   = historyTimestamp
                 });
-                var tmp2 = Path.Combine(historyDir, Path.GetRandomFileName());
-                await File.WriteAllTextAsync(tmp2, history.ToJsonString(jsonWriteOptions));
-                File.Move(tmp2, historyFile, overwrite: true);
             }
+
+            var tmp2 = Path.Combine(historyDir, Path.GetRandomFileName());
+            await File.WriteAllTextAsync(tmp2, history.ToJsonString(jsonWriteOptions));
+            File.Move(tmp2, historyFile, overwrite: true);
         }
         catch (Exception ex)
         {
@@ -173,27 +186,28 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
         finally { historyLock.Release(); }
     }
 
-    return Results.Ok(new { ok = true, id = req.Id, decided_at = decidedAt });
+    return isDuplicate
+        ? Results.Ok(new { ok = true, id = req.Id, decided_at = priorDecidedAt ?? decidedAt })
+        : Results.Ok(new { ok = true, id = req.Id, decided_at = decidedAt });
 });
 
 app.MapPost("/api/ship-prompt", async (HttpContext ctx) =>
 {
-    // Read prompt from body (plain text or JSON)
+    // Read prompt + queued_ids from JSON body
     string? prompt = null;
+    string[] queuedIds = Array.Empty<string>();
     var ct = ctx.RequestAborted;
     try
     {
-        var contentType = ctx.Request.ContentType ?? "";
-        if (contentType.Contains("application/json"))
-        {
-            var node = await JsonNode.ParseAsync(ctx.Request.Body, cancellationToken: ct);
-            prompt = node?["prompt"]?.GetValue<string>();
-        }
-        else
-        {
-            using var reader = new System.IO.StreamReader(ctx.Request.Body, Encoding.UTF8);
-            prompt = await reader.ReadToEndAsync(ct);
-        }
+        var node = await JsonNode.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+        prompt = node?["prompt"]?.GetValue<string>();
+        var idsNode = node?["queued_ids"]?.AsArray();
+        if (idsNode is not null)
+            queuedIds = idsNode
+                .Select(n => n?.GetValue<string>())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Select(s => s!)
+                .ToArray();
     }
     catch { /* fall through — prompt stays null */ }
 
@@ -224,10 +238,8 @@ app.MapPost("/api/ship-prompt", async (HttpContext ctx) =>
     try
     {
         var s = compressed;
-        // Trim each line
         s = Regex.Replace(s, @"[ \t]+", " ");
         s = string.Join("\n", s.Split('\n').Select(l => l.Trim()));
-        // Collapse 3+ newlines to 2
         s = Regex.Replace(s, @"\n{3,}", "\n\n");
         s = s.Trim();
         compressed = s;
@@ -237,7 +249,8 @@ app.MapPost("/api/ship-prompt", async (HttpContext ctx) =>
         warnings.Add($"whitespace-collapse failed: {ex.Message}");
     }
 
-    // Persist to report JSON
+    // Persist shipped_prompt and per-finding queued decisions to report JSON
+    var shippedAt = DateTime.UtcNow.ToString("O");
     try
     {
         await reportLock.WaitAsync(ct);
@@ -250,8 +263,25 @@ app.MapPost("/api/ship-prompt", async (HttpContext ctx) =>
             {
                 ["readable"]    = prompt,
                 ["transformed"] = compressed,
-                ["shipped_at"]  = DateTime.UtcNow.ToString("O")
+                ["shipped_at"]  = shippedAt
             };
+
+            // Write a decisions entry for each queued finding so the audit trail is complete
+            if (queuedIds.Length > 0)
+            {
+                if (doc["decisions"] is not JsonObject decisionsObj)
+                {
+                    decisionsObj = new JsonObject();
+                    doc["decisions"] = decisionsObj;
+                }
+                foreach (var id in queuedIds)
+                {
+                    // Only write if not already decided (dismissed takes precedence)
+                    if (decisionsObj[id] is null)
+                        decisionsObj[id] = new JsonObject { ["action"] = "queued", ["decided_at"] = shippedAt };
+                }
+            }
+
             var tmp = Path.Combine(Path.GetDirectoryName(reportPath)!, Path.GetRandomFileName());
             await File.WriteAllTextAsync(tmp, doc.ToJsonString(jsonWriteOptions), ct);
             File.Move(tmp, reportPath, overwrite: true);
@@ -336,7 +366,11 @@ static bool IsPortBound(string address, int port)
 {
     try
     {
-        var ip  = address == "0.0.0.0" ? IPAddress.Any : IPAddress.Parse(address);
+        // When binding to all-interfaces (0.0.0.0), probe loopback (127.0.0.1) — a locally-running
+        // server will accept a loopback connection, whereas TcpClient.Connect(IPAddress.Any, n)
+        // resolves differently per OS and is unreliable on Windows.
+        var probeAddress = (address == "0.0.0.0") ? "127.0.0.1" : address;
+        var ip = IPAddress.Parse(probeAddress);
         using var sock = new TcpClient();
         sock.Connect(ip, port);
         return true;   // connection succeeded → port is already listening
@@ -728,29 +762,26 @@ static void PlaceFormatInfo(bool[,] m, bool[,] r, int size, int eccLevel, int ma
         if ((fmt >> i & 1) == 1) fmt ^= gen << (i - 10);
     fmt = (data << 10 | fmt) ^ 0b101010000010010;
 
-    // Place around top-left finder
-    int[] positions = { 0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8 };
-    int[] row_pos =   { 8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1 };
-    int[] col_pos =   { 0, 1, 2, 3, 4, 5, 7, 8, 8, 8, 8, 8, 8, 8 };
-    int[] row_pos2 =  { 8, 8, 8, 8, 8, 8, 8, 8, 7, 5, 4, 3, 2, 1 };
+    // Place around top-left finder — ISO 18004 §7.9.1
+    // Horizontal strip: bits 0-5 → row 8, cols 0-5; bit 6 → row 8, col 7 (skip timing col 6); bit 7 → row 8, col 8
+    int[] fmtCols = { 0, 1, 2, 3, 4, 5, 7, 8 };
+    for (int i = 0; i < 8; i++)
+        m[8, fmtCols[i]] = (fmt >> i & 1) == 1;
 
-    for (int i = 0; i < 15; i++)
-    {
-        bool bit = (fmt >> i & 1) == 1;
-        // horizontal strip (row 8)
-        int c = i < 6 ? i : (i == 6 ? 7 : 8 + (14 - i < 6 ? 14 - i : 14 - i + 1));
-        // Just use standard placement tables
-        m[8, i < 6 ? i : (i == 6 ? 7 : 8)] = bit;
-        m[i < 6 ? i : (i == 6 ? 7 : 8), 8] = bit;
-    }
+    // Vertical strip: bits 8-14 → col 8, rows 7, 5, 4, 3, 2, 1, 0 (skip timing row 6)
+    int[] fmtRows = { 7, 5, 4, 3, 2, 1, 0 };
+    for (int i = 0; i < 7; i++)
+        m[fmtRows[i], 8] = (fmt >> (8 + i) & 1) == 1;
 
     // Place bottom-left and top-right copies
+    // Bottom-left: bits 0-7 (8 modules) → col 8, rows size-1 down to size-8
+    // Bit 7 lands on the dark-module position (size-8, 8) which is then overridden to always-dark
     for (int i = 0; i < 8; i++)
-    {
         m[size - 1 - i, 8] = (fmt >> i & 1) == 1;
-        m[8, size - 8 + i] = (fmt >> (14 - i) & 1) == 1;
-    }
-    m[size - 8, 8] = true; // dark module
+    // Top-right: bits 8-14 (7 modules) → row 8, cols size-7 to size-1
+    for (int i = 0; i < 7; i++)
+        m[8, size - 7 + i] = (fmt >> (8 + i) & 1) == 1;
+    m[size - 8, 8] = true; // dark module — always dark per spec (overrides bit 7 above)
 }
 
 // ── Request models ───────────────────────────────────────────────────────────
