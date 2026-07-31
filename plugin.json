@@ -1,0 +1,16 @@
+{
+  "$schema": "https://docs.github.com/schemas/copilot-cli/plugin.json",
+  "name": "blazor-orchestration",
+  "version": "0.1.0",
+  "description": "Blazor-focused orchestration package: one orchestrator, narrow specialist agents, shared skills, telemetry, and opt-in self-improvement analysis.",
+  "author": "blazor-orchestration-package",
+  "agents": [
+    "agents/blazor-orchestrator.agent.md",
+    "agents/blazor-component-author.agent.md",
+    "agents/blazor-component-extractor.agent.md",
+    "agents/blazor-form-specialist.agent.md"
+  ],
+  "skills": [
+    "skills/blazor-orchestrator"
+  ]
+}

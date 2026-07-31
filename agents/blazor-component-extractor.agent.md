@@ -4,6 +4,10 @@ description: Extracts existing Razor page sections into focused reusable compone
 tools: ['read', 'search', 'edit']
 ---
 
+> **Note:** This specialist is designed to be invoked by the `blazor-orchestrator` agent.
+> Direct invocation produces no run record and no telemetry. The specialist still performs its
+> work, but no run ID, routing log, or report envelope is emitted and no recovery path is built in.
+
 # Blazor component extractor
 
 ## In scope

@@ -1,3 +1,5 @@
+# Documentation index — NOT a Copilot CLI loader manifest.
+# The real plugin loader manifest is plugin.json. Install with: copilot plugin install <package-dir>
 name: blazor-orchestration-package
 version: 0.1.0
 description: A folder-based package for Blazor-focused orchestration, specialist agents, shared skills, telemetry, and opt-in self-improvement analysis.

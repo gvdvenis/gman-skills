@@ -8,9 +8,21 @@ keeps telemetry local by default.
 
 ## Installation and layout
 
-Install by copying the complete `blazor-orchestration-package` folder into the agent/skill package
-root supported by the harness. `manifest.yaml` is the package index. The harness-specific loader
-target is intentionally not hard-coded until that integration decision is settled.
+Install the package as a Copilot CLI plugin:
+
+```sh
+copilot plugin install <path-to-blazor-orchestration-package>
+```
+
+After installation, verify the components loaded:
+
+```sh
+copilot /plugin list        # confirm blazor-orchestration is listed
+copilot /agent              # confirm blazor-orchestrator and specialists appear
+copilot /skills list        # confirm blazor-orchestrator skill is available
+```
+
+After any local change, reinstall to pick up the updated content (the CLI caches installed plugins).
 
 The package owns these directories:
 
@@ -26,9 +38,13 @@ The package owns these directories:
 
 The orchestrator:
 
-- parses the task and `--skip-code-review` / `--self-improve` flags;
-- selects exactly one primary lane before execution;
-- keeps narrow, low-coordination work inline;
+- generates a `run_id` (format: `run-YYYYMMDD-HHMM`) at the start of every invocation and announces
+  it in the first output line, regardless of telemetry settings;
+- parses `--skip-code-review` and `--self-improve` from natural language — `$ARGUMENTS` substitution
+  is not relied upon;
+- applies the deterministic route classifier in `docs/routing-classifier.md` to select exactly one
+  primary lane and decide inline vs delegate before touching any file;
+- keeps narrow, low-coordination work inline (single lane, ≤ 2 files, no broad repo discovery);
 - delegates when isolation or parallelism has a net quality/token benefit;
 - aggregates structured specialist reports;
 - runs code review by default, with a stop rule for diminishing returns;
