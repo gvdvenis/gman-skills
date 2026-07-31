@@ -263,11 +263,14 @@
     #copy-readable.copied { background: #15803d; }
 
     #copy-llm {
-      background: #1e293b;
-      color: #4b5563;
-      border: 1px solid #374151;
-      cursor: not-allowed;
+      background: #1e3a5f;
+      color: #93c5fd;
+      border: 1px solid #3b82f6;
+      cursor: pointer;
     }
+
+    #copy-llm:hover { background: #1e4d8c; }
+    #copy-llm.shipped { background: #15803d; color: #fff; }
 
     /* Loading / error states */
     #loading {
@@ -320,10 +323,7 @@
     <pre id="prompt-output" style="display:none"></pre>
     <div class="ws-actions" id="ws-actions" style="display:none">
       <button class="copy-btn" id="copy-readable">Copy prompt (readable)</button>
-      <button class="copy-btn" id="copy-llm"
-        title="Requires the ship-prompt endpoint — will be wired in ticket 19">
-        Copy for LLM (unavailable)
-      </button>
+      <button class="copy-btn" id="copy-llm">Copy for LLM</button>
     </div>
   </aside>
 </main>
@@ -569,8 +569,26 @@
     }
   });
 
-  // Copy for LLM — disabled until ticket 19
-  document.getElementById('copy-llm').addEventListener('click', (e) => { e.preventDefault(); });
+  // Copy for LLM — ship-prompt endpoint
+  document.getElementById('copy-llm').addEventListener('click', async () => {
+    const promptText = document.getElementById('prompt-output')?.textContent ?? '';
+    if (!promptText) return;
+    try {
+      const res = await fetch('/api/ship-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: promptText
+      });
+      const data = await res.json();
+      const btn = document.getElementById('copy-llm');
+      btn.textContent = '✓ Shipped!';
+      btn.classList.add('shipped');
+      setTimeout(() => { btn.textContent = 'Copy for LLM'; btn.classList.remove('shipped'); }, 2000);
+      if (data.warnings?.length) alert('Warnings:\n' + data.warnings.join('\n'));
+    } catch (err) {
+      alert('ship-prompt failed: ' + err.message);
+    }
+  });
 
   // ── Utilities ──────────────────────────────────────────────────────────────
   function esc(str) {

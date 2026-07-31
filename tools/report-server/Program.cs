@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 // ── CLI argument parsing ────────────────────────────────────────────────────
 var reportPath = GetArg(args, "--report-path");
@@ -172,6 +174,107 @@ app.MapPost("/api/dismissals", async (HttpContext ctx) =>
     }
 
     return Results.Ok(new { ok = true, id = req.Id, decided_at = decidedAt });
+});
+
+app.MapPost("/api/ship-prompt", async (HttpContext ctx) =>
+{
+    // Read prompt from body (plain text or JSON)
+    string? prompt = null;
+    var ct = ctx.RequestAborted;
+    try
+    {
+        var contentType = ctx.Request.ContentType ?? "";
+        if (contentType.Contains("application/json"))
+        {
+            var node = await JsonNode.ParseAsync(ctx.Request.Body, cancellationToken: ct);
+            prompt = node?["prompt"]?.GetValue<string>();
+        }
+        else
+        {
+            using var reader = new System.IO.StreamReader(ctx.Request.Body, Encoding.UTF8);
+            prompt = await reader.ReadToEndAsync(ct);
+        }
+    }
+    catch { /* fall through — prompt stays null */ }
+
+    if (string.IsNullOrWhiteSpace(prompt))
+        return Results.BadRequest(new { ok = false, error = "prompt is required" });
+
+    var warnings = new List<string>();
+    var compressed = prompt;
+
+    // Pass 1: strip markdown
+    try
+    {
+        var s = compressed;
+        s = Regex.Replace(s, @"^#{1,6}\s+", "", RegexOptions.Multiline);   // headers
+        s = Regex.Replace(s, @"\*\*(.+?)\*\*", "$1");                       // bold
+        s = Regex.Replace(s, @"\*(.+?)\*", "$1");                           // italic *
+        s = Regex.Replace(s, @"_(.+?)_", "$1");                             // italic _
+        s = Regex.Replace(s, @"`(.+?)`", "$1");                             // inline code
+        s = Regex.Replace(s, @"^(-{3,}|\*{3,})\s*$", "", RegexOptions.Multiline); // hr
+        compressed = s;
+    }
+    catch (Exception ex)
+    {
+        warnings.Add($"markdown-strip failed: {ex.Message}");
+    }
+
+    // Pass 2: collapse whitespace
+    try
+    {
+        var s = compressed;
+        // Trim each line
+        s = Regex.Replace(s, @"[ \t]+", " ");
+        s = string.Join("\n", s.Split('\n').Select(l => l.Trim()));
+        // Collapse 3+ newlines to 2
+        s = Regex.Replace(s, @"\n{3,}", "\n\n");
+        s = s.Trim();
+        compressed = s;
+    }
+    catch (Exception ex)
+    {
+        warnings.Add($"whitespace-collapse failed: {ex.Message}");
+    }
+
+    // Persist to report JSON
+    try
+    {
+        await reportLock.WaitAsync(ct);
+        try
+        {
+            var raw = await File.ReadAllTextAsync(reportPath, ct);
+            var doc = JsonNode.Parse(raw)?.AsObject()
+                      ?? throw new InvalidOperationException("report root is not an object");
+            doc["shipped_prompt"] = new JsonObject
+            {
+                ["readable"]    = prompt,
+                ["transformed"] = compressed,
+                ["shipped_at"]  = DateTime.UtcNow.ToString("O")
+            };
+            var tmp = Path.Combine(Path.GetDirectoryName(reportPath)!, Path.GetRandomFileName());
+            await File.WriteAllTextAsync(tmp, doc.ToJsonString(jsonWriteOptions), ct);
+            File.Move(tmp, reportPath, overwrite: true);
+        }
+        finally { reportLock.Release(); }
+    }
+    catch (Exception ex)
+    {
+        warnings.Add($"persist failed: {ex.Message}");
+    }
+
+    // Clipboard via OSC-52
+    try
+    {
+        var b64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(compressed));
+        Console.Write($"\x1b]52;c;{b64}\x07");
+    }
+    catch (Exception ex)
+    {
+        warnings.Add($"clipboard failed: {ex.Message}");
+    }
+
+    return Results.Ok(new { ok = true, transformed = compressed, warnings });
 });
 
 app.MapGet("/shutdown", async (HttpContext ctx) =>
