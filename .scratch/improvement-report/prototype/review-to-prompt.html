@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — Review-to-prompt interaction model
+  Three variants switchable via ?variant=A/B/C (or ← → keys / bottom bar).
+  Throwaway: answers the wayfinder ticket 02, then moves to branch prototype/review-to-prompt.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROTOTYPE — Review-to-prompt</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 14px;
+      background: #f4f5f7;
+      color: #1a1a1a;
+      min-height: 100vh;
+    }
+
+    /* severity tokens */
+    .sev-high   { --sev-bg: #fee2e2; --sev-text: #b91c1c; --sev-dot: #ef4444; }
+    .sev-medium { --sev-bg: #fef3c7; --sev-text: #92400e; --sev-dot: #f59e0b; }
+    .sev-low    { --sev-bg: #e0f2fe; --sev-text: #0369a1; --sev-dot: #38bdf8; }
+
+    .sev-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: 9999px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+      background: var(--sev-bg); color: var(--sev-text);
+    }
+    .sev-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--sev-dot); }
+
+    .cat-pill {
+      display: inline-block; padding: 2px 7px; border-radius: 4px;
+      font-size: 11px; font-weight: 500; background: #e5e7eb; color: #374151;
+    }
+    .specialist-tag { font-size: 11px; color: #9ca3af; }
+
+    /* ─── floating switcher ─────────────────────────────── */
+    #switcher {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: 12px; padding: 8px 18px;
+      background: #18181b; color: #fff; border-radius: 9999px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.35); z-index: 9999; user-select: none;
+    }
+    #switcher button {
+      background: none; border: none; color: #fff; font-size: 18px;
+      cursor: pointer; padding: 2px 5px; border-radius: 4px; line-height: 1;
+    }
+    #switcher button:hover { background: rgba(255,255,255,.15); }
+    #switcher .sw-label { font-size: 13px; font-weight: 500; min-width: 190px; text-align: center; }
+
+    /* ─── variant shell ─────────────────────────────────── */
+    .variant { display: none; min-height: 100vh; flex-direction: column; }
+    .variant.active { display: flex; }
+
+    .top-bar {
+      background: #fff; border-bottom: 1px solid #e5e7eb;
+      padding: 12px 20px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .top-bar h1 { font-size: 16px; font-weight: 700; color: #111; }
+    .top-bar .run-meta { font-size: 12px; color: #9ca3af; font-family: monospace; }
+
+    /* ─── shared button styles ──────────────────────────── */
+    .btn-primary {
+      padding: 6px 16px; border-radius: 6px;
+      background: #3b82f6; color: #fff; border: none;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary.success { background: #16a34a; }
+
+    .btn-ghost {
+      padding: 6px 14px; border-radius: 6px;
+      background: none; border: 1px solid #d1d5db; color: #6b7280;
+      font-size: 13px; cursor: pointer;
+    }
+    .btn-ghost:hover { background: #f9fafb; }
+
+    .btn-outline-add {
+      padding: 5px 14px; border-radius: 6px;
+      border: 1px solid #3b82f6; color: #3b82f6; background: #eff6ff;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+    }
+    .btn-outline-add:hover { background: #dbeafe; }
+    .btn-outline-add.added { border-color: #16a34a; color: #16a34a; background: #f0fdf4; }
+    .btn-outline-add.added:hover { background: #dcfce7; }
+
+    /* =====================================================
+       VARIANT A — Card list + right sidebar
+       ===================================================== */
+    #varA .layout { display: flex; flex: 1; overflow: hidden; }
+
+    #varA .findings-pane {
+      flex: 1; overflow-y: auto; padding: 20px;
+      padding-bottom: 80px;
+    }
+    #varA .sev-group-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: #6b7280; margin: 16px 0 8px;
+    }
+    #varA .sev-group-label:first-child { margin-top: 0; }
+
+    .finding-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 14px 16px; margin-bottom: 10px;
+      transition: box-shadow .1s;
+    }
+    .finding-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.07); }
+    .finding-card .card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
+    .finding-card .card-title { font-size: 14px; font-weight: 600; color: #111; margin-bottom: 4px; }
+    .finding-card .card-summary { font-size: 13px; color: #4b5563; line-height: 1.55; margin-bottom: 8px; }
+    .finding-card .card-impact { font-size: 12px; color: #6b7280; margin-bottom: 10px; }
+    .finding-card .card-impact strong { color: #374151; }
+    .finding-card .card-footer { display: flex; justify-content: flex-end; }
+
+    #varA .sidebar {
+      width: 310px; min-width: 260px;
+      background: #fff; border-left: 1px solid #e5e7eb;
+      display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+    }
+    #varA .sb-head {
+      padding: 13px 16px; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 600; color: #374151; flex-shrink: 0;
+    }
+    #varA .sb-count {
+      background: #3b82f6; color: #fff;
+      border-radius: 9999px; font-size: 11px; font-weight: 700; padding: 1px 8px;
+    }
+    #varA .sb-queue {
+      flex: 1; overflow-y: auto; padding: 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .sb-empty { color: #9ca3af; font-size: 13px; text-align: center; padding: 40px 16px; }
+
+    .queue-item {
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+      padding: 8px 10px; display: flex; gap: 8px; align-items: flex-start;
+    }
+    .queue-item .qi-text { flex: 1; font-size: 12px; color: #374151; line-height: 1.5; }
+    .queue-item .qi-title { font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 3px; }
+    .queue-item .qi-remove {
+      background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; line-height: 1;
+    }
+    .queue-item .qi-remove:hover { color: #ef4444; }
+
+    #varA .sb-prompt {
+      border-top: 1px solid #e5e7eb; padding: 12px 14px; flex-shrink: 0;
+    }
+    #varA .sb-prompt label {
+      font-size: 11px; font-weight: 700; color: #9ca3af;
+      text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 6px;
+    }
+    #varA .sb-prompt textarea {
+      width: 100%; height: 90px; font-size: 12px; font-family: monospace;
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 5px;
+      padding: 8px; resize: none; color: #374151; line-height: 1.5;
+    }
+    #varA .sb-prompt .copy-row { margin-top: 8px; }
+
+    /* =====================================================
+       VARIANT B — Master-detail + bottom drawer
+       ===================================================== */
+    #varB .layout { display: flex; flex: 1; overflow: hidden; }
+
+    #varB .list-pane {
+      width: 320px; min-width: 260px; flex-shrink: 0;
+      background: #fff; border-right: 1px solid #e5e7eb;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    #varB .filter-row {
+      padding: 10px 12px; border-bottom: 1px solid #e5e7eb;
+      display: flex; gap: 5px; flex-wrap: wrap; flex-shrink: 0;
+    }
+    .fpill {
+      padding: 3px 11px; border-radius: 9999px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: 1px solid #e5e7eb; background: #f9fafb; color: #374151;
+      transition: background .1s;
+    }
+    .fpill.f-all    { }
+    .fpill.f-all.on    { background: #111; color: #fff; border-color: #111; }
+    .fpill.f-high.on   { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .fpill.f-medium.on { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+    .fpill.f-low.on    { background: #e0f2fe; color: #0369a1; border-color: #7dd3fc; }
+
+    #varB .finding-rows { flex: 1; overflow-y: auto; }
+    .frow {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; border-bottom: 1px solid #f3f4f6;
+      cursor: pointer;
+    }
+    .frow:hover { background: #f9fafb; }
+    .frow.sel   { background: #eff6ff; }
+    .frow.inq   { background: #f0fdf4; }
+    .frow.sel.inq { background: #d1fae5; }
+    .frow .fdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+    .frow .frow-title { font-size: 13px; font-weight: 500; color: #111; line-height: 1.4; }
+    .frow .frow-sub { font-size: 11px; color: #9ca3af; margin-top: 2px; display: flex; gap: 5px; }
+    .inq-tag {
+      font-size: 10px; font-weight: 700; color: #16a34a;
+      background: #dcfce7; padding: 1px 5px; border-radius: 3px; margin-left: 4px;
+    }
+
+    #varB .detail-pane {
+      flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #f4f5f7;
+    }
+    #varB .detail-body { flex: 1; overflow-y: auto; padding: 24px; }
+    #varB .detail-placeholder {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%; color: #9ca3af; text-align: center;
+    }
+    #varB .detail-placeholder .ph-arrow { font-size: 32px; margin-bottom: 10px; opacity: .4; }
+
+    #varB .detail-card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 20px; max-width: 640px;
+    }
+    #varB .dc-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 10px; }
+    #varB .dc-title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 12px; line-height: 1.3; }
+    #varB .dc-section { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; margin-top: 14px; }
+    #varB .dc-text { font-size: 13px; color: #374151; line-height: 1.6; }
+    #varB .dc-fragment {
+      width: 100%; padding: 10px 12px; margin-top: 4px;
+      font-family: monospace; font-size: 13px; line-height: 1.6;
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px;
+      color: #1f2937; resize: vertical; min-height: 70px;
+    }
+    #varB .dc-fragment:focus { outline: 2px solid #3b82f6; outline-offset: 1px; }
+
+    #varB .detail-actions {
+      padding: 12px 24px; border-top: 1px solid #e5e7eb; background: #fff;
+      display: flex; gap: 10px; justify-content: flex-end; flex-shrink: 0;
+    }
+
+    /* drawer */
+    #varB .drawer {
+      background: #1e293b; color: #e2e8f0; flex-shrink: 0;
+      overflow: hidden; transition: height .18s ease;
+    }
+    .drawer-h48 { height: 48px; }
+    .drawer-h220 { height: 220px; }
+
+    #varB .drawer-head {
+      height: 48px; padding: 0 20px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+    }
+    #varB .dh-left { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+    .dh-badge {
+      background: #3b82f6; border-radius: 9999px;
+      padding: 1px 8px; font-size: 11px; font-weight: 700; color: #fff;
+    }
+    #varB .dh-right { display: flex; align-items: center; gap: 10px; }
+    #varB .dh-right button { cursor: pointer; }
+    .drawer-copy-btn {
+      padding: 4px 12px; border-radius: 5px;
+      background: #3b82f6; border: none; color: #fff;
+      font-size: 12px; font-weight: 500; cursor: pointer;
+    }
+    .drawer-copy-btn:hover { background: #2563eb; }
+    .drawer-copy-btn.success { background: #16a34a; }
+    .drawer-toggle-btn { background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; }
+
+    #varB .drawer-body { padding: 0 20px 14px; height: 172px; }
+    #varB .drawer-body textarea {
+      width: 100%; height: 100%; resize: none;
+      background: none; border: none; outline: none;
+      color: #cbd5e1; font-family: monospace; font-size: 12px; line-height: 1.6;
+    }
+
+    /* =====================================================
+       VARIANT C — Grid + multi-select + modal
+       ===================================================== */
+    #varC .body { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 120px; }
+
+    #varC .filter-bar {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 14px;
+      display: flex; gap: 14px; align-items: center; flex-wrap: wrap;
+    }
+    #varC .filter-bar .fb-label { font-size: 12px; font-weight: 600; color: #6b7280; white-space: nowrap; }
+    #varC .filter-bar .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    #varC .quick-row {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .qbtn {
+      padding: 4px 12px; border-radius: 5px; font-size: 12px; font-weight: 500;
+      cursor: pointer; border: 1px solid #e5e7eb; background: #fff; color: #374151;
+    }
+    .qbtn:hover { background: #f3f4f6; }
+    .qbtn.sel-all-high   { border-color: #fca5a5; color: #b91c1c; }
+    .qbtn.sel-all-medium { border-color: #fcd34d; color: #92400e; }
+    #varC .sel-info { font-size: 12px; color: #6b7280; margin-left: 4px; }
+
+    .cards-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px;
+    }
+
+    .gcard {
+      background: #fff; border: 2px solid #e5e7eb; border-radius: 8px;
+      padding: 13px 13px 11px; cursor: pointer; position: relative;
+      transition: border-color .12s, box-shadow .12s;
+    }
+    .gcard:hover { border-color: #93c5fd; box-shadow: 0 2px 10px rgba(59,130,246,.1); }
+    .gcard.on { border-color: #3b82f6; background: #eff6ff; }
+    .gcard .gc-check {
+      position: absolute; top: 10px; right: 10px;
+      width: 18px; height: 18px; border-radius: 4px;
+      border: 2px solid #d1d5db; background: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #fff;
+      transition: background .1s, border-color .1s;
+    }
+    .gcard.on .gc-check { background: #3b82f6; border-color: #3b82f6; }
+    .gcard .gc-title { font-size: 13px; font-weight: 600; color: #111; margin-bottom: 7px; padding-right: 24px; line-height: 1.4; }
+    .gcard .gc-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 7px; }
+    .gcard .gc-summary { font-size: 12px; color: #6b7280; line-height: 1.5; }
+
+    /* prompt bar */
+    #varC .prompt-bar {
+      position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%);
+      background: #1e293b; color: #fff; border-radius: 10px;
+      padding: 10px 20px; display: flex; gap: 16px; align-items: center;
+      box-shadow: 0 4px 20px rgba(0,0,0,.28); z-index: 200;
+      transition: opacity .15s, transform .15s;
+    }
+    #varC .prompt-bar.hidden { opacity: 0; pointer-events: none; transform: translateX(-50%) translateY(8px); }
+    #varC .pb-title { font-size: 14px; font-weight: 600; }
+    #varC .pb-sub { font-size: 12px; color: #94a3b8; }
+
+    /* modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 20px;
+    }
+    .modal-backdrop.hidden { display: none; }
+    .modal-box {
+      background: #fff; border-radius: 12px;
+      width: 100%; max-width: 580px; max-height: 82vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    }
+    .modal-head {
+      padding: 15px 20px; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .modal-head h2 { font-size: 15px; font-weight: 700; }
+    .modal-close { background: none; border: none; font-size: 22px; color: #6b7280; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: #111; }
+    .modal-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    .modal-section { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .modal-section + * { margin-top: 0; }
+    .mfinding-row { padding: 8px 0; border-bottom: 1px solid #f3f4f6; }
+    .mfinding-row:last-child { border-bottom: none; }
+    .mfinding-row .mf-title { font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 3px; display: flex; align-items: center; gap: 7px; }
+    .mfinding-row .mf-frag { font-family: monospace; font-size: 12px; color: #4b5563; line-height: 1.5; }
+    .modal-prompt-ta {
+      width: 100%; padding: 10px 12px; margin-top: 12px;
+      font-family: monospace; font-size: 13px; line-height: 1.6;
+      border: 1px solid #e5e7eb; border-radius: 6px; resize: vertical;
+      background: #f9fafb; color: #1f2937; min-height: 180px;
+    }
+    .modal-foot {
+      padding: 14px 20px; border-top: 1px solid #e5e7eb;
+      display: flex; gap: 10px; align-items: center; flex-shrink: 0;
+    }
+    .modal-foot .mf-note { font-size: 12px; color: #9ca3af; margin-right: auto; }
+
+    /* empty state */
+    .empty-finding {
+      text-align: center; padding: 60px 20px; color: #9ca3af;
+      font-size: 13px;
+    }
+    .empty-finding .ef-icon { font-size: 36px; margin-bottom: 10px; opacity: .5; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════
+     VARIANT A — Card list + right sidebar
+     ═══════════════════════════════════════════════════════ -->
+<div id="varA" class="variant">
+  <div class="top-bar">
+    <h1>Improvement report</h1>
+    <span class="run-meta">run 2026-07-31T16:06:00Z · 7 findings</span>
+  </div>
+  <div class="layout">
+    <div class="findings-pane" id="vA-findings"></div>
+    <div class="sidebar">
+      <div class="sb-head">
+        Prompt queue <span class="sb-count" id="vA-count">0</span>
+      </div>
+      <div class="sb-queue" id="vA-queue">
+        <div class="sb-empty">Add findings below to build your prompt.</div>
+      </div>
+      <div class="sb-prompt">
+        <label>Assembled prompt</label>
+        <textarea id="vA-ta" readonly placeholder="Nothing queued yet."></textarea>
+        <div class="copy-row">
+          <button class="btn-primary" style="width:100%" id="vA-copy" onclick="copyText('vA-ta','vA-copy')">Copy prompt</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VARIANT B — Master-detail + bottom drawer
+     ═══════════════════════════════════════════════════════ -->
+<div id="varB" class="variant">
+  <div class="top-bar">
+    <h1>Improvement report</h1>
+    <span class="run-meta">run 2026-07-31T16:06:00Z · 7 findings</span>
+  </div>
+  <div class="layout">
+    <div class="list-pane">
+      <div class="filter-row" id="vB-filters"></div>
+      <div class="finding-rows" id="vB-rows"></div>
+    </div>
+    <div class="detail-pane">
+      <div class="detail-body" id="vB-detail">
+        <div class="detail-placeholder">
+          <div class="ph-arrow">←</div>
+          <p>Select a finding to review it</p>
+        </div>
+      </div>
+      <div class="detail-actions" id="vB-actions" style="display:none">
+        <button class="btn-ghost" id="vB-remove-btn" onclick="vBRemove()">Remove from prompt</button>
+        <button class="btn-primary" id="vB-add-btn" onclick="vBAdd()">Add to prompt</button>
+      </div>
+      <div class="drawer drawer-h48" id="vB-drawer">
+        <div class="drawer-head" onclick="vBToggleDrawer()">
+          <div class="dh-left">
+            Prompt <span class="dh-badge" id="vB-drawer-n">0</span>
+          </div>
+          <div class="dh-right" onclick="event.stopPropagation()">
+            <button class="drawer-copy-btn" id="vB-dcopy" onclick="copyText('vB-ta','vB-dcopy')">Copy</button>
+            <button class="drawer-toggle-btn" id="vB-dtoggle">▲</button>
+          </div>
+        </div>
+        <div class="drawer-body" id="vB-drawer-body" style="display:none">
+          <textarea id="vB-ta" readonly placeholder="No findings queued yet."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     VARIANT C — Grid + multi-select + modal
+     ═══════════════════════════════════════════════════════ -->
+<div id="varC" class="variant">
+  <div class="top-bar">
+    <h1>Improvement report</h1>
+    <span class="run-meta">run 2026-07-31T16:06:00Z · 7 findings</span>
+  </div>
+  <div class="body">
+    <div class="filter-bar">
+      <span class="fb-label">Filter:</span>
+      <div class="pills" id="vC-filters"></div>
+    </div>
+    <div class="quick-row">
+      <button class="qbtn sel-all-high" onclick="vCSelectBySev('high')">+ All high</button>
+      <button class="qbtn sel-all-medium" onclick="vCSelectBySev('medium')">+ All medium</button>
+      <button class="qbtn" onclick="vCClearAll()">Clear</button>
+      <span class="sel-info" id="vC-sel-info">0 selected</span>
+    </div>
+    <div class="cards-grid" id="vC-grid"></div>
+  </div>
+  <div class="prompt-bar hidden" id="vC-bar">
+    <div>
+      <div class="pb-title" id="vC-bar-n">0 findings</div>
+      <div class="pb-sub">selected</div>
+    </div>
+    <button class="btn-primary" onclick="vCOpenModal()">Build prompt →</button>
+  </div>
+</div>
+
+<!-- Modal for C -->
+<div class="modal-backdrop hidden" id="vC-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Assembled prompt</h2>
+      <button class="modal-close" onclick="vCCloseModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">Findings included</div>
+      <div id="vC-modal-list"></div>
+      <div class="modal-section" style="margin-top:16px">Prompt</div>
+      <textarea class="modal-prompt-ta" id="vC-ta"></textarea>
+    </div>
+    <div class="modal-foot">
+      <span class="mf-note" id="vC-modal-note"></span>
+      <button class="btn-ghost" onclick="vCCloseModal()">Close</button>
+      <button class="btn-primary" id="vC-copy" onclick="copyText('vC-ta','vC-copy')">Copy prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Floating switcher -->
+<div id="switcher">
+  <button onclick="prevV()">←</button>
+  <span class="sw-label" id="sw-label">A — Card list + sidebar</span>
+  <button onclick="nextV()">→</button>
+</div>
+
+<script>
+/* ─── sample data ───────────────────────────────────────────── */
+const FINDINGS = [
+  {
+    id:'f1', specialist:'blazor-component-architect',
+    title:'Build not verified after component generation',
+    summary:'Components are generated without running dotnet build, leaving silent compile errors undetected.',
+    category:'validation', severity:'high',
+    expected_impact:'Eliminates silent compile errors in generated components.',
+    prompt_fragment:'In blazor-component-architect sessions: before finalising output, always run `dotnet build` to confirm the component compiles without errors.'
+  },
+  {
+    id:'f2', specialist:'refactor-dotnet',
+    title:'Service locator anti-pattern introduced in controller',
+    summary:'Refactor output calls IServiceProvider.GetService<T>() inside a controller action instead of resolving via constructor injection.',
+    category:'planning', severity:'high',
+    expected_impact:'Removes a hard-to-test anti-pattern that bypasses DI lifetimes.',
+    prompt_fragment:'Never introduce IServiceProvider.GetService inside a controller or Razor Page; always resolve dependencies via constructor injection.'
+  },
+  {
+    id:'f3', specialist:'refactor-dotnet',
+    title:'async void used in event handlers',
+    summary:'Refactor suggestions introduce async void event handlers without noting the exception-swallowing risk in non-Blazor contexts.',
+    category:'output_quality', severity:'high',
+    expected_impact:'Prevents hard-to-diagnose runtime exceptions in async event handlers.',
+    prompt_fragment:'Never suggest async void except for Blazor EventCallback handlers; always prefer async Task and document the exception risk when overriding.'
+  },
+  {
+    id:'f4', specialist:'blazor-component-architect',
+    title:'CSS isolation file omitted from output',
+    summary:'When generating components with scoped styles the .razor.css isolation file is frequently missing, requiring a follow-up correction.',
+    category:'output_quality', severity:'medium',
+    expected_impact:'Reduces follow-up corrections for missing style isolation.',
+    prompt_fragment:'When a component uses scoped styles, always emit the .razor.css isolation file alongside the .razor file.'
+  },
+  {
+    id:'f5', specialist:'dotnet-backend-patterns',
+    title:'CancellationToken not forwarded to EF Core queries',
+    summary:'Generated service methods accept CancellationToken but do not pass it through to EF Core queries or HttpClient calls.',
+    category:'output_quality', severity:'medium',
+    expected_impact:'Improves cooperative cancellation in long-running API calls.',
+    prompt_fragment:'Always forward the CancellationToken parameter to every EF Core query and HttpClient call in generated service methods.'
+  },
+  {
+    id:'f6', specialist:'dotnet-backend-patterns',
+    title:'EF Core tracking not disabled for read-only queries',
+    summary:'Generated read-only queries use default change tracking, adding unnecessary memory overhead for display-only data.',
+    category:'tool_use', severity:'low',
+    expected_impact:'Reduces memory overhead on read-heavy endpoints.',
+    prompt_fragment:'For queries that only populate read-only views or DTOs, always add .AsNoTracking() to the EF Core query.'
+  },
+  {
+    id:'f7', specialist:'blazor-component-architect',
+    title:'Vague next_action in session handoff',
+    summary:"Session summaries end with generic suggestions like 'consider refactoring' without naming a specific file or decision.",
+    category:'communication', severity:'low',
+    expected_impact:'Reduces ambiguity at session boundaries.',
+    prompt_fragment:'End each session summary with a concrete next_action: one sentence naming the specific file, method, or decision the next session should start with.'
+  }
+];
+
+const SEV_ORDER = { high:0, medium:1, low:2 };
+const CAT_LABEL = { validation:'validation', output_quality:'output quality', planning:'planning', tool_use:'tool use', communication:'communication' };
+const VARIANTS = ['varA','varB','varC'];
+const VNAMES = ['A — Card list + sidebar', 'B — Master-detail + drawer', 'C — Grid + multi-select'];
+let currentV = 0;
+
+/* ─── shared state ──────────────────────────────────────────── */
+const qA = new Set(), qB = new Set(), qC = new Set();
+let vBSel = null, vBOpen = false, vBFilter = 'all', vCFilter = 'all';
+
+/* ─── DOM helpers ───────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+function sevBadge(s) {
+  const d = {high:'#ef4444',medium:'#f59e0b',low:'#38bdf8'};
+  return `<span class="sev-badge sev-${s}"><span class="sev-dot" style="background:${d[s]}"></span>${s}</span>`;
+}
+function catPill(c) { return `<span class="cat-pill">${CAT_LABEL[c]||c}</span>`; }
+function assemble(set) {
+  if(!set.size) return '';
+  return FINDINGS.filter(f=>set.has(f.id))
+    .sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity])
+    .map(f=>f.prompt_fragment).join('\n\n');
+}
+function copyText(taId, btnId) {
+  const val = $(taId).value;
+  if(!val) return;
+  navigator.clipboard.writeText(val).catch(()=>{});
+  const btn = $(btnId);
+  const orig = btn.textContent;
+  btn.textContent = '✓ Copied'; btn.classList.add('success');
+  setTimeout(()=>{ btn.textContent = orig; btn.classList.remove('success'); }, 2000);
+}
+
+/* ─── switcher ──────────────────────────────────────────────── */
+function setVariant(i) {
+  VARIANTS.forEach((id,j)=>$(id).classList.toggle('active', i===j));
+  $('sw-label').textContent = VNAMES[i];
+  currentV = i;
+  const u = new URL(location.href);
+  u.searchParams.set('variant', 'ABC'[i]);
+  history.replaceState(null,'',u);
+}
+function prevV() { setVariant((currentV+3-1)%3); }
+function nextV() { setVariant((currentV+1)%3); }
+document.addEventListener('keydown', e => {
+  const t = document.activeElement.tagName;
+  if(['INPUT','TEXTAREA'].includes(t)||document.activeElement.isContentEditable) return;
+  if(e.key==='ArrowLeft') prevV();
+  if(e.key==='ArrowRight') nextV();
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT A
+   ═══════════════════════════════════════════════════════════════ */
+function vARender() {
+  const byGroup = {high:[],medium:[],low:[]};
+  [...FINDINGS].sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity]).forEach(f=>byGroup[f.severity].push(f));
+  let h = '';
+  for(const [sev, group] of Object.entries(byGroup)) {
+    if(!group.length) continue;
+    h += `<div class="sev-group-label">${sev}</div>`;
+    group.forEach(f=>{
+      const on = qA.has(f.id);
+      h += `<div class="finding-card">
+        <div class="card-meta">${sevBadge(f.severity)} ${catPill(f.category)} <span class="specialist-tag">${f.specialist}</span></div>
+        <div class="card-title">${f.title}</div>
+        <div class="card-summary">${f.summary}</div>
+        <div class="card-impact"><strong>Impact:</strong> ${f.expected_impact}</div>
+        <div class="card-footer">
+          <button class="btn-outline-add ${on?'added':''}" id="vA-btn-${f.id}" onclick="vAToggle('${f.id}')">
+            ${on?'✓ In prompt':'+ Add to prompt'}
+          </button>
+        </div>
+      </div>`;
+    });
+  }
+  $('vA-findings').innerHTML = h;
+}
+function vAToggle(id) {
+  qA.has(id) ? qA.delete(id) : qA.add(id);
+  const on = qA.has(id);
+  const btn = $(`vA-btn-${id}`);
+  btn.textContent = on ? '✓ In prompt' : '+ Add to prompt';
+  btn.classList.toggle('added', on);
+  vASidebar();
+}
+function vASidebar() {
+  $('vA-count').textContent = qA.size;
+  const q = $('vA-queue');
+  if(!qA.size){
+    q.innerHTML = '<div class="sb-empty">Add findings below to build your prompt.</div>';
+  } else {
+    const sorted = FINDINGS.filter(f=>qA.has(f.id)).sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity]);
+    q.innerHTML = sorted.map(f=>`
+      <div class="queue-item">
+        <div class="qi-text">
+          <div class="qi-title">${sevBadge(f.severity)} ${f.title}</div>
+          ${f.prompt_fragment}
+        </div>
+        <button class="qi-remove" onclick="vAToggle('${f.id}')" title="Remove">×</button>
+      </div>`).join('');
+  }
+  $('vA-ta').value = assemble(qA);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT B
+   ═══════════════════════════════════════════════════════════════ */
+const DOT_COLORS = {high:'#ef4444', medium:'#f59e0b', low:'#38bdf8'};
+
+function vBRenderFilters() {
+  $('vB-filters').innerHTML = ['all','high','medium','low'].map(f=>`
+    <span class="fpill f-${f} ${vBFilter===f?'on':''}" onclick="vBSetFilter('${f}')">
+      ${f==='all'?'All':f[0].toUpperCase()+f.slice(1)}
+    </span>`).join('');
+}
+function vBSetFilter(f){ vBFilter=f; vBRenderFilters(); vBRenderRows(); }
+
+function vBRenderRows() {
+  let list = [...FINDINGS].sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity]);
+  if(vBFilter!=='all') list = list.filter(f=>f.severity===vBFilter);
+  if(!list.length){
+    $('vB-rows').innerHTML = '<div class="empty-finding"><div class="ef-icon">🔍</div><p>No findings match this filter.</p></div>';
+    return;
+  }
+  $('vB-rows').innerHTML = list.map(f=>{
+    const sel = vBSel===f.id, inq = qB.has(f.id);
+    return `<div class="frow ${sel?'sel':''} ${inq?'inq':''}" onclick="vBSelect('${f.id}')">
+      <div class="fdot" style="background:${DOT_COLORS[f.severity]}"></div>
+      <div>
+        <div class="frow-title">${f.title}${inq?'<span class="inq-tag">in prompt</span>':''}</div>
+        <div class="frow-sub"><span>${f.specialist}</span><span>·</span><span>${CAT_LABEL[f.category]||f.category}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function vBSelect(id) {
+  vBSel = id;
+  const f = FINDINGS.find(x=>x.id===id);
+  const inq = qB.has(id);
+  $('vB-detail').innerHTML = `
+    <div class="detail-card">
+      <div class="dc-meta">${sevBadge(f.severity)} ${catPill(f.category)} <span class="specialist-tag">${f.specialist}</span></div>
+      <div class="dc-title">${f.title}</div>
+      <div class="dc-section">Summary</div>
+      <div class="dc-text">${f.summary}</div>
+      <div class="dc-section">Expected impact</div>
+      <div class="dc-text">${f.expected_impact}</div>
+      <div class="dc-section">Prompt fragment <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#9ca3af">(editable before adding)</span></div>
+      <textarea class="dc-fragment" id="vB-frag-${id}" spellcheck="false">${f.prompt_fragment}</textarea>
+    </div>`;
+  const acts = $('vB-actions');
+  acts.style.display = 'flex';
+  const addBtn = $('vB-add-btn');
+  const rmBtn  = $('vB-remove-btn');
+  addBtn.textContent = inq ? '✓ In prompt' : 'Add to prompt';
+  addBtn.classList.toggle('success', inq);
+  rmBtn.style.display = inq ? 'inline-block' : 'none';
+  vBRenderRows();
+}
+
+function vBAdd() {
+  if(!vBSel) return;
+  const ta = $(`vB-frag-${vBSel}`);
+  if(ta) { const f=FINDINGS.find(x=>x.id===vBSel); if(f) f._frag = ta.value; }
+  qB.add(vBSel);
+  vBSelect(vBSel);
+  vBUpdateDrawer();
+}
+function vBRemove() {
+  if(!vBSel) return;
+  qB.delete(vBSel);
+  vBSelect(vBSel);
+  vBUpdateDrawer();
+}
+function vBUpdateDrawer() {
+  $('vB-drawer-n').textContent = qB.size;
+  $('vB-ta').value = FINDINGS.filter(f=>qB.has(f.id))
+    .sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity])
+    .map(f=>f._frag||f.prompt_fragment).join('\n\n');
+}
+function vBToggleDrawer() {
+  vBOpen = !vBOpen;
+  const d = $('vB-drawer'), body = $('vB-drawer-body'), tog = $('vB-dtoggle');
+  d.className = `drawer ${vBOpen?'drawer-h220':'drawer-h48'}`;
+  body.style.display = vBOpen ? 'block' : 'none';
+  tog.textContent = vBOpen ? '▼' : '▲';
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   VARIANT C
+   ═══════════════════════════════════════════════════════════════ */
+function vCRenderFilters() {
+  $('vC-filters').innerHTML = ['all','high','medium','low'].map(f=>`
+    <span class="fpill f-${f} ${vCFilter===f?'on':''}" onclick="vCSetFilter('${f}')">
+      ${f==='all'?'All':f[0].toUpperCase()+f.slice(1)}
+    </span>`).join('');
+}
+function vCSetFilter(f){ vCFilter=f; vCRenderFilters(); vCRenderGrid(); }
+
+function vCRenderGrid() {
+  let list = [...FINDINGS].sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity]);
+  if(vCFilter!=='all') list=list.filter(f=>f.severity===vCFilter);
+  if(!list.length){
+    $('vC-grid').innerHTML = '<div class="empty-finding" style="grid-column:1/-1"><div class="ef-icon">🔍</div><p>No findings match the current filter.</p></div>';
+  } else {
+    $('vC-grid').innerHTML = list.map(f=>{
+      const on = qC.has(f.id);
+      return `<div class="gcard ${on?'on':''}" onclick="vCToggle('${f.id}')">
+        <div class="gc-check">${on?'✓':''}</div>
+        <div class="gc-title">${f.title}</div>
+        <div class="gc-meta">${sevBadge(f.severity)} ${catPill(f.category)}</div>
+        <div class="gc-summary">${f.summary}</div>
+      </div>`;
+    }).join('');
+  }
+  vCUpdateBar();
+}
+function vCToggle(id){ qC.has(id)?qC.delete(id):qC.add(id); vCRenderGrid(); }
+function vCSelectBySev(s){ FINDINGS.filter(f=>f.severity===s).forEach(f=>qC.add(f.id)); vCRenderGrid(); }
+function vCClearAll(){ qC.clear(); vCRenderGrid(); }
+function vCUpdateBar() {
+  const n = qC.size;
+  $('vC-sel-info').textContent = `${n} selected`;
+  $('vC-bar-n').textContent = `${n} finding${n!==1?'s':''}`;
+  $('vC-bar').classList.toggle('hidden', n===0);
+}
+function vCOpenModal() {
+  const sorted = FINDINGS.filter(f=>qC.has(f.id)).sort((a,b)=>SEV_ORDER[a.severity]-SEV_ORDER[b.severity]);
+  $('vC-modal-list').innerHTML = sorted.map(f=>`
+    <div class="mfinding-row">
+      <div class="mf-title">${sevBadge(f.severity)} ${f.title}</div>
+      <div class="mf-frag">${f.prompt_fragment}</div>
+    </div>`).join('');
+  $('vC-ta').value = assemble(qC);
+  $('vC-modal-note').textContent = `${qC.size} finding${qC.size!==1?'s':''} · edit before copying if needed`;
+  $('vC-modal').classList.remove('hidden');
+}
+function vCCloseModal() { $('vC-modal').classList.add('hidden'); }
+
+/* ─── init ──────────────────────────────────────────────────── */
+(function init() {
+  vARender();
+  vBRenderFilters(); vBRenderRows();
+  vCRenderFilters(); vCRenderGrid();
+
+  const p = new URLSearchParams(location.search).get('variant');
+  const i = p ? Math.max(0, 'ABC'.indexOf(p.toUpperCase().charAt(0))) : 0;
+  setVariant(i);
+})();
+</script>
+</body>
+</html>

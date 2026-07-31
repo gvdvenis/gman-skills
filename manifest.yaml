@@ -1,0 +1,48 @@
+name: blazor-orchestration-package
+version: 0.1.0
+description: A folder-based package for Blazor-focused orchestration, specialist agents, shared skills, telemetry, and opt-in self-improvement analysis.
+components:
+  orchestrator:
+    type: agent-or-skill
+    path: agents/blazor-orchestrator.agent.md
+    role: routes one primary lane, chooses inline or delegated execution, and aggregates reports
+  specialists:
+    - name: blazor-component-extractor
+      path: agents/blazor-component-extractor.agent.md
+    - name: blazor-component-author
+      path: agents/blazor-component-author.agent.md
+    - name: blazor-form-specialist
+      path: agents/blazor-form-specialist.agent.md
+  skills:
+    - name: blazor-component-architect
+      path: skills/blazor-component-architect/SKILL.md
+    - name: fluentui-blazor
+      path: skills/fluentui-blazor/SKILL.md
+    - name: codebase-design
+      path: skills/codebase-design/SKILL.md
+  telemetry:
+    event_schema: telemetry/event-schema.json
+    feedback_report_template: telemetry/feedback-report-template.json
+    improvement_analyzer: telemetry/improvement-analyzer.md
+runtime:
+  flags:
+    skip_code_review:
+      cli: --skip-code-review
+      default: false
+      behavior: Skip the adversarial code-review gate.
+    self_improve:
+      cli: --self-improve
+      default: false
+      behavior: Collect diagnostics and emit recommendation-only improvement artifacts.
+  artifacts:
+    run_directory: .copilot/blazor-orchestration/runs/<run_id>/
+    events: events.jsonl
+    specialist_reports: reports/
+    analysis: analysis.json
+    improvement_report: reports/self-improvement-report.html
+  privacy:
+    telemetry_local_by_default: true
+    external_model_calls: disabled
+package_format:
+  type: folder
+  install_hint: Copy the package folder into the agent/skill package root used by your harness.

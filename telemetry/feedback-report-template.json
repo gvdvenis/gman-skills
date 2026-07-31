@@ -1,0 +1,21 @@
+{
+  "run_id": "<uuid>",
+  "agent_id": "<agent-name>",
+  "lane": "<lane>",
+  "outcome": "<completed|partial|blocked>",
+  "tools_used": [],
+  "tokens_estimate": 0,
+  "issues": [
+    {
+      "category": "missing_tool|ambiguity|verbosity|token_usage|scope_drift|handoff_gap",
+      "severity": "low|medium|high",
+      "message": "<brief description>"
+    }
+  ],
+  "self_diagnosis": {
+    "what_went_well": "",
+    "what_was_unclear": "",
+    "what_would_improve_next_time": ""
+  },
+  "suggested_improvements": []
+}

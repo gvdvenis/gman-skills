@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "events": {
+    "dispatch": {
+      "required": ["run_id", "timestamp", "orchestrator_id", "agent_id", "lane", "task_summary"]
+    },
+    "tool_use": {
+      "required": ["run_id", "timestamp", "agent_id", "tool", "purpose", "tokens_estimate"]
+    },
+    "tool_missed": {
+      "required": ["run_id", "timestamp", "agent_id", "suspected_tool", "reason", "severity"]
+    },
+    "handoff": {
+      "required": ["run_id", "timestamp", "from", "to", "reason"]
+    },
+    "completion": {
+      "required": ["run_id", "timestamp", "agent_id", "lane", "outcome", "notes"]
+    },
+    "feedback": {
+      "required": ["run_id", "timestamp", "agent_id", "category", "severity", "message"]
+    },
+    "analysis": {
+      "required": ["run_id", "timestamp", "orchestrator_id", "summary", "recommendations"]
+    }
+  }
+}

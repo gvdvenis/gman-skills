@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Run review | Agent system improvement</title>
+  <style>
+    :root {
+      --ink: #18212f;
+      --muted: #657185;
+      --canvas: #f4f6f9;
+      --surface: #ffffff;
+      --line: #d9e0e8;
+      --navy: #1a365d;
+      --critical: #c53131;
+      --critical-tint: #fff3f2;
+      --warning: #a55b00;
+      --warning-tint: #fff8e8;
+      --advisory: #2267aa;
+      --advisory-tint: #f1f7ff;
+      --success: #26734d;
+      --shadow: 0 14px 32px rgba(29, 43, 65, .08);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--canvas); color: var(--ink); }
+    button, textarea { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, textarea:focus-visible { outline: 3px solid #8ec5ff; outline-offset: 2px; }
+
+    .shell {
+      max-width: 1560px;
+      min-height: 100vh;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 390px;
+    }
+
+    .workspace { padding: 44px 46px 64px; }
+    .masthead {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--advisory);
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 { margin: 0; color: var(--navy); font-size: clamp(2rem, 3vw, 3.25rem); line-height: 1; letter-spacing: -.045em; }
+    .lede { max-width: 670px; margin: 14px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.55; }
+    .run-stamp { min-width: 178px; color: var(--muted); font-size: .8rem; line-height: 1.6; text-align: right; }
+    .run-stamp strong { color: var(--ink); }
+
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 28px 0 34px;
+    }
+    .metric {
+      padding: 16px 18px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--metric);
+      border-radius: 8px;
+      box-shadow: 0 3px 10px rgba(30, 41, 59, .03);
+    }
+    .metric span { display: block; color: var(--muted); font-size: .77rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 4px; font-size: 1.55rem; letter-spacing: -.04em; }
+
+    .finding-group { margin-top: 34px; }
+    .group-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .group-header h2 { margin: 0; font-size: 1.05rem; letter-spacing: -.015em; }
+    .group-header p { margin: 0; color: var(--muted); font-size: .86rem; }
+    .group-header .count {
+      display: inline-grid; min-width: 24px; height: 24px; place-items: center;
+      color: white; border-radius: 99px; font-size: .75rem; font-weight: 800;
+    }
+    .group-critical h2 { color: var(--critical); }
+    .group-warning h2 { color: var(--warning); }
+    .group-advisory h2 { color: var(--advisory); }
+    .group-critical .count { background: var(--critical); }
+    .group-warning .count { background: var(--warning); }
+    .group-advisory .count { background: var(--advisory); }
+
+    .finding {
+      display: grid;
+      grid-template-columns: 10px minmax(0, 1fr) auto;
+      gap: 17px;
+      align-items: start;
+      padding: 20px;
+      margin-bottom: 10px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 3px 10px rgba(30, 41, 59, .025);
+    }
+    .finding-bar { align-self: stretch; border-radius: 8px; background: var(--severity); }
+    .finding h3 { margin: 0; font-size: 1.05rem; letter-spacing: -.02em; }
+    .finding p { max-width: 800px; margin: 7px 0 0; color: #4e5b6c; font-size: .93rem; line-height: 1.5; }
+    .finding-meta { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 13px; }
+    .chip { padding: 4px 8px; border-radius: 4px; background: #eef2f6; color: #516074; font-size: .7rem; font-weight: 750; letter-spacing: .035em; text-transform: uppercase; }
+    .severity-critical { --severity: var(--critical); }
+    .severity-warning { --severity: var(--warning); }
+    .severity-advisory { --severity: var(--advisory); }
+
+    .scores { display: grid; grid-template-columns: repeat(2, max-content); gap: 6px; margin-left: 12px; }
+    .score { width: 76px; padding: 7px 6px; border: 1px solid var(--line); border-radius: 6px; text-align: center; }
+    .score span { display: block; color: var(--muted); font-size: .61rem; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
+    .score strong { display: block; margin-top: 2px; font-size: .9rem; }
+    .positive { color: var(--success); }
+    .neutral { color: var(--muted); }
+
+    .queue-button {
+      display: inline-flex; align-items: center; justify-content: center; min-width: 104px;
+      margin: 12px 0 0 12px; padding: 9px 12px; border: 1px solid #b7c9dc; border-radius: 6px;
+      background: white; color: var(--advisory); font-size: .82rem; font-weight: 750;
+    }
+    .queue-button:hover { background: #edf6ff; }
+    .queue-button[aria-pressed="true"] { border-color: var(--navy); background: var(--navy); color: white; }
+
+    .prompt-panel {
+      position: sticky; top: 0; height: 100vh; padding: 34px 28px;
+      background: #14243b; color: white; box-shadow: -12px 0 30px rgba(15, 23, 42, .08);
+    }
+    .prompt-panel .eyebrow { color: #8bc6ff; }
+    .prompt-panel h2 { margin: 0; font-size: 1.5rem; letter-spacing: -.035em; }
+    .panel-copy { margin: 9px 0 22px; color: #bccbdb; font-size: .89rem; line-height: 1.5; }
+    .selection-count { display: flex; justify-content: space-between; align-items: center; margin: 15px 0 9px; color: #dfe8f2; font-size: .76rem; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+    .clear-button { padding: 0; border: 0; background: transparent; color: #8bc6ff; font-size: .76rem; font-weight: 700; }
+    textarea { width: 100%; min-height: 295px; resize: vertical; border: 1px solid #3b5571; border-radius: 8px; background: #0d1a2c; color: #eaf2fb; padding: 13px; font: .84rem/1.62 ui-monospace, "Cascadia Code", Consolas, monospace; }
+    .prompt-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }
+    .copy-button { padding: 12px 10px; border: 0; border-radius: 7px; background: #7ec2fc; color: #0c2138; font-size: .8rem; font-weight: 800; }
+    .copy-button:hover { background: #b6dcff; }
+    .copy-button.secondary { border: 1px solid #52718f; background: transparent; color: #dcecff; }
+    .copy-button.secondary:hover { background: #1c344f; }
+    .refresh-button { width: 100%; margin-top: 8px; padding: 0; border: 0; background: transparent; color: #8bc6ff; font-size: .78rem; font-weight: 700; text-align: left; }
+    .copy-status { min-height: 20px; margin: 9px 0 0; color: #b7c7d8; font-size: .8rem; text-align: center; }
+    .how-it-works { margin-top: 30px; padding-top: 21px; border-top: 1px solid #34506d; }
+    .how-it-works h3 { margin: 0 0 10px; color: #dce8f5; font-size: .78rem; letter-spacing: .07em; text-transform: uppercase; }
+    .how-it-works ol { margin: 0; padding-left: 20px; color: #b9c8d9; font-size: .84rem; line-height: 1.7; }
+
+    @media (max-width: 980px) {
+      .shell { display: block; }
+      .workspace { padding: 30px 22px; }
+      .prompt-panel { position: static; width: 100%; height: auto; padding: 28px 22px; }
+      .masthead { align-items: start; flex-direction: column; }
+      .run-stamp { text-align: left; }
+    }
+    @media (max-width: 640px) {
+      .overview { grid-template-columns: 1fr; }
+      .finding { grid-template-columns: 7px minmax(0, 1fr); gap: 13px; }
+      .finding > .scores, .finding > .queue-button { grid-column: 2; margin-left: 0; }
+      .scores { grid-template-columns: repeat(4, 1fr); }
+      .score { width: auto; }
+      .queue-button { width: 100%; }
+      .prompt-actions { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      .finding { transition: transform .16s ease, box-shadow .16s ease; }
+      .finding:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="workspace" aria-labelledby="page-title">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">Blazor orchestration package / run assessment</p>
+          <h1 id="page-title">Improve the system,<br>not just this run.</h1>
+          <p class="lede">Findings are ordered by the risk they pose to reliable, token-efficient delivery. Queue only the changes you want to send back for implementation.</p>
+        </div>
+        <div class="run-stamp">
+          <strong>Example assessment</strong><br>
+          Generated locally · ready for review
+        </div>
+      </header>
+
+      <section class="overview" aria-label="Assessment summary">
+        <div class="metric" style="--metric: var(--critical)"><span>Critical findings</span><strong id="critical-count">0</strong></div>
+        <div class="metric" style="--metric: var(--warning)"><span>Warnings</span><strong id="warning-count">0</strong></div>
+        <div class="metric" style="--metric: var(--advisory)"><span>Low-impact improvements</span><strong id="advisory-count">0</strong></div>
+      </section>
+
+      <div id="finding-groups"></div>
+    </section>
+
+    <aside class="prompt-panel" aria-label="Improvement prompt builder">
+      <p class="eyebrow">Implementation brief</p>
+      <h2>Selected changes</h2>
+      <p class="panel-copy">Edit the Markdown brief directly, then copy the readable version or a locally compacted LLM-ready version.</p>
+      <div class="selection-count">
+        <span id="selection-label">0 changes queued</span>
+        <button class="clear-button" type="button" id="clear-button">Clear all</button>
+      </div>
+      <textarea id="prompt-output" aria-label="Editable Markdown implementation brief" placeholder="Select a finding to add its implementation guidance."></textarea>
+      <button class="refresh-button" type="button" id="refresh-button">Refresh draft from queued changes</button>
+      <div class="prompt-actions">
+        <button class="copy-button secondary" type="button" id="copy-button">Copy Markdown brief</button>
+        <button class="copy-button" type="button" id="copy-llm-button">Copy compact LLM brief</button>
+      </div>
+      <p class="copy-status" id="copy-status" aria-live="polite"></p>
+      <section class="how-it-works">
+        <h3>Review flow</h3>
+        <ol>
+          <li>Start with red failures.</li>
+          <li>Queue only accepted changes.</li>
+          <li>Edit, then copy the brief you need.</li>
+        </ol>
+      </section>
+    </aside>
+  </main>
+
+  <script>
+    const findings = [
+      {
+        id: "dispatch-observability",
+        severity: "critical",
+        title: "Agent handoffs cannot be audited",
+        description: "The proposed run contract does not require a durable dispatch and completion record. A failed or partial specialist run can therefore look complete to the orchestrator.",
+        category: "telemetry",
+        scores: { token: 1, quality: 2, clarity: 2, maintenance: 2 },
+        prompt: "Add a mandatory, structured dispatch and completion record for every specialist run. Include the assigned lane, task boundary, files changed, outcome, and blocking issue so the orchestrator can distinguish completed work from partial work."
+      },
+      {
+        id: "review-stop-rule",
+        severity: "critical",
+        title: "The review loop has no measurable stop rule",
+        description: "“Diminishing returns” is subjective without a defined threshold. The review cycle may continue needlessly or stop before a material finding is addressed.",
+        category: "review process",
+        scores: { token: 2, quality: 2, clarity: 2, maintenance: 1 },
+        prompt: "Define a measurable code-review stop rule: repeat only while findings contain a high-confidence correctness, security, or spec violation. Stop when the remaining findings are non-blocking and their expected value is lower than another review pass."
+      },
+      {
+        id: "tool-first-routing",
+        severity: "warning",
+        title: "Routing does not prove the cheapest viable tool path",
+        description: "The orchestrator prefers narrow scope, but it has no explicit checkpoint to choose a direct tool over broader exploration or unnecessary delegation.",
+        category: "tool selection",
+        scores: { token: 2, quality: 1, clarity: 1, maintenance: 1 },
+        prompt: "Before delegating or expanding context, evaluate whether one direct, purpose-built tool can resolve the task. Choose the valid path with the fewest tool calls and the lowest expected token cost."
+      },
+      {
+        id: "lane-overlap",
+        severity: "warning",
+        title: "Adjacent Blazor lanes can compete for the same task",
+        description: "Component extraction, forms, and data work overlap in realistic requests. Without a precedence rule, multiple skills can claim the same prompt and produce duplicated reasoning.",
+        category: "routing",
+        scores: { token: 2, quality: 2, clarity: 2, maintenance: 2 },
+        prompt: "Add lane precedence rules to the Blazor orchestrator. Select one primary lane from the user’s stated outcome; treat other lanes as explicit follow-up work unless they are necessary to complete that outcome."
+      },
+      {
+        id: "instruction-compression",
+        severity: "advisory",
+        title: "Compress repeated behavioral guidance into checkable rules",
+        description: "Some agent guidance states the same intent in several forms. A short completion criterion and one routing rule will preserve behavior with less context load.",
+        category: "prompt design",
+        scores: { token: 2, quality: 1, clarity: 2, maintenance: 2 },
+        prompt: "Prune repeated behavioral guidance. Keep one authoritative routing rule and one checkable completion criterion for each lane; remove prose that does not change the agent’s behavior."
+      },
+      {
+        id: "accepted-change-history",
+        severity: "advisory",
+        title: "Track which proposed improvements were accepted",
+        description: "Recording accepted and dismissed suggestions will make future improvement reports evidence-led rather than repeatedly proposing the same rejected changes.",
+        category: "learning loop",
+        scores: { token: 1, quality: 1, clarity: 1, maintenance: 2 },
+        prompt: "Persist each improvement suggestion with its evidence, score, user decision, and resulting package change. Use this history to suppress repeatedly dismissed suggestions and prioritize changes that were previously accepted."
+      }
+    ];
+
+    const severityConfig = {
+      critical: { title: "Critical", description: "Failures that can make the run unreliable or untraceable.", className: "group-critical" },
+      warning: { title: "Warnings", description: "Risks that can degrade output quality or consume unnecessary tokens.", className: "group-warning" },
+      advisory: { title: "Low-impact improvements", description: "Quality-of-life changes with limited downside.", className: "group-advisory" }
+    };
+
+    const selected = new Set();
+    const groupHost = document.getElementById("finding-groups");
+    const output = document.getElementById("prompt-output");
+    const selectionLabel = document.getElementById("selection-label");
+    const copyStatus = document.getElementById("copy-status");
+    let draftDirty = false;
+
+    function signedScore(score) {
+      return score > 0 ? `+${score}` : String(score);
+    }
+
+    function scoreClass(score) {
+      return score > 0 ? "positive" : "neutral";
+    }
+
+    function renderFindings() {
+      groupHost.innerHTML = "";
+      Object.entries(severityConfig).forEach(([severity, config]) => {
+        const items = findings.filter((finding) => finding.severity === severity);
+        document.getElementById(`${severity}-count`).textContent = items.length;
+
+        const group = document.createElement("section");
+        group.className = `finding-group ${config.className}`;
+        group.setAttribute("aria-labelledby", `${severity}-title`);
+        group.innerHTML = `
+          <header class="group-header">
+            <h2 id="${severity}-title">${config.title}</h2>
+            <span class="count">${items.length}</span>
+            <p>${config.description}</p>
+          </header>
+        `;
+
+        items.forEach((finding) => {
+          const queued = selected.has(finding.id);
+          const item = document.createElement("article");
+          item.className = `finding severity-${finding.severity}`;
+          item.innerHTML = `
+            <div class="finding-bar" aria-hidden="true"></div>
+            <div>
+              <h3>${finding.title}</h3>
+              <p>${finding.description}</p>
+              <div class="finding-meta"><span class="chip">${finding.category}</span></div>
+            </div>
+            <div>
+              <div class="scores" aria-label="Expected impact scores">
+                <div class="score"><span>Tokens</span><strong class="${scoreClass(finding.scores.token)}">${signedScore(finding.scores.token)}</strong></div>
+                <div class="score"><span>Quality</span><strong class="${scoreClass(finding.scores.quality)}">${signedScore(finding.scores.quality)}</strong></div>
+                <div class="score"><span>Clarity</span><strong class="${scoreClass(finding.scores.clarity)}">${signedScore(finding.scores.clarity)}</strong></div>
+                <div class="score"><span>Maintain</span><strong class="${scoreClass(finding.scores.maintenance)}">${signedScore(finding.scores.maintenance)}</strong></div>
+              </div>
+              <button class="queue-button" type="button" data-id="${finding.id}" aria-pressed="${queued}">${queued ? "Queued" : "Add to brief"}</button>
+            </div>
+          `;
+          item.querySelector("button").addEventListener("click", () => toggleFinding(finding.id));
+          group.appendChild(item);
+        });
+        groupHost.appendChild(group);
+      });
+    }
+
+    function buildMarkdown() {
+      const queued = findings.filter((finding) => selected.has(finding.id));
+      const instructions = queued.map((finding, index) => `${index + 1}. ${finding.prompt}`);
+      return instructions.length
+        ? `# Improve the Blazor orchestration package\\n\\n## Accepted changes\\n\\n${instructions.join("\\n\\n")}\\n\\n## Constraints\\n\\n- Keep the implementation focused.\\n- Retain the existing package structure where possible.\\n\\n## Report back\\n\\n- Files changed\\n- Validation performed`
+        : "";
+    }
+
+    function compactForLlm(markdown) {
+      return markdown
+        .replace(/^# (.+)$/m, "Task: $1")
+        .replace(/^## (.+)$/gm, "$1:")
+        .replace(/^\s*-\s+/gm, "- ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+    }
+
+    function renderSelection(refreshDraft = false) {
+      if (refreshDraft || !draftDirty) output.value = buildMarkdown();
+      selectionLabel.textContent = `${selected.size} ${selected.size === 1 ? "change" : "changes"} queued`;
+      copyStatus.textContent = "";
+    }
+
+    function toggleFinding(id) {
+      const wasDirty = draftDirty;
+      selected.has(id) ? selected.delete(id) : selected.add(id);
+      renderFindings();
+      renderSelection(false);
+      if (wasDirty) copyStatus.textContent = "Selection changed. Refresh the draft to include the queued changes.";
+    }
+
+    document.getElementById("clear-button").addEventListener("click", () => {
+      selected.clear();
+      draftDirty = false;
+      renderFindings();
+      renderSelection(true);
+    });
+
+    async function copyText(text, successMessage) {
+      if (!text) {
+        copyStatus.textContent = "Select at least one finding first.";
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        copyStatus.textContent = successMessage;
+      } catch {
+        output.focus();
+        output.select();
+        document.execCommand("copy");
+        copyStatus.textContent = successMessage;
+      }
+    }
+
+    document.getElementById("refresh-button").addEventListener("click", () => {
+      draftDirty = false;
+      renderSelection(true);
+      copyStatus.textContent = "Draft refreshed from queued changes.";
+    });
+
+    document.getElementById("copy-button").addEventListener("click", async () => {
+      await copyText(output.value, "Markdown brief copied.");
+    });
+
+    document.getElementById("copy-llm-button").addEventListener("click", async () => {
+      await copyText(compactForLlm(output.value), "Compact LLM brief copied.");
+    });
+
+    output.addEventListener("input", () => {
+      draftDirty = true;
+      copyStatus.textContent = "Draft edited. Copy either version when ready.";
+    });
+
+    renderFindings();
+    renderSelection(true);
+  </script>
+</body>
+</html>
