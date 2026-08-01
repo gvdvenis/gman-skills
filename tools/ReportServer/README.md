@@ -40,14 +40,47 @@ Minimal ASP.NET Core server that serves `improvement-report-data.json` for the
    - the idle timeout elapses (no requests for `--idle-minutes` minutes), **or**
    - the terminal session ends (parent process exits).
 
-## Building
+## Development preview
 
 ```sh
-dotnet build
+dotnet run
 ```
 
-## Running (development)
+The Development launch profile uses an isolated temporary copy of
+`Fixtures/improvement-report-data.json`, so the report renders immediately and actions such as
+dismissal and prompt shipping never alter tracked fixture data.
+
+## Running a specific report
 
 ```sh
 dotnet run -- --report-path /path/to/improvement-report-data.json
 ```
+
+Outside Development, `--report-path` is required.
+
+## Build and test
+
+```sh
+dotnet build
+dotnet test ReportServer.Tests/ReportServer.Tests.csproj
+```
+
+## Native AOT publish
+
+The server is configured for self-contained native AOT publishing. Publish the Windows target
+with:
+
+```sh
+dotnet publish -c Release -r win-x64
+```
+
+Native AOT requires the Visual Studio C++ build tools (including `vswhere.exe` and the x64 linker)
+to be installed. If the Visual Studio Installer directory is not already on `PATH`, run this
+PowerShell command before publishing:
+
+```powershell
+$env:Path = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer;$env:Path"
+dotnet publish -c Release -r win-x64
+```
+
+Add one publish command and native-toolchain validation per additional target runtime identifier.

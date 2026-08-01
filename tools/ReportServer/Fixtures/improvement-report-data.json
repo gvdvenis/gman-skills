@@ -1,0 +1,48 @@
+{
+  "$schema": "../../../telemetry/improvement-report-data-schema.json",
+  "schema_version": "1.1",
+  "generated_at": "2026-08-01T00:15:00Z",
+  "origin": {
+    "skill_id": "blazor-component-architect",
+    "skill_scope": "user",
+    "skill_path": "C:/Users/g.vd.venis/.agents/skills/blazor-component-architect",
+    "repo_root": "C:/Users/g.vd.venis/source/repos/mock-blazor-app",
+    "run_id": "run-development-preview"
+  },
+  "findings": [
+    {
+      "id": "f-001",
+      "suggestion_key": "tool_use:read-before-edit:always-view-target-file",
+      "specialist": "blazor-component-architect",
+      "title": "View target file before every edit",
+      "summary": "The specialist issued an edit without first confirming the current target file state.",
+      "category": "tool_use",
+      "severity": "high",
+      "expected_impact": "Eliminates stale-base edits and reduces review-cycle churn.",
+      "prompt_fragment": "Before issuing any edit, view the target file to confirm its current content.",
+      "evidence": [{ "specialist": "blazor-component-architect", "issue_index": 0 }],
+      "recurrence_count": 2,
+      "first_seen": "2026-07-31T18:42:00Z",
+      "last_seen": "2026-08-01T00:15:00Z",
+      "ranking_score": 3.2
+    },
+    {
+      "id": "f-002",
+      "suggestion_key": "planning:scope-check:confirm-lane-before-delegating",
+      "specialist": "blazor-component-architect",
+      "title": "Confirm lane scope before delegation",
+      "summary": "The task crossed into an adjacent specialist lane without surfacing the boundary.",
+      "category": "planning",
+      "severity": "medium",
+      "expected_impact": "Reduces mid-run rerouting and keeps specialist work bounded.",
+      "prompt_fragment": "Before implementation, identify adjacent specialist lanes and ask for routing confirmation.",
+      "evidence": [{ "specialist": "blazor-component-architect", "issue_index": 1 }],
+      "recurrence_count": 1,
+      "first_seen": "2026-08-01T00:15:00Z",
+      "last_seen": "2026-08-01T00:15:00Z",
+      "ranking_score": 2.0
+    }
+  ],
+  "decisions": {},
+  "shipped_prompt": null
+}
