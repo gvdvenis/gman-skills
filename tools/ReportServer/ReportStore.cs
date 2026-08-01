@@ -4,8 +4,8 @@ namespace ReportServer;
 
 public sealed class ReportStore(string reportPath, string historyPath)
 {
-    private readonly SemaphoreSlim reportLock = new(1, 1);
-    private readonly SemaphoreSlim historyLock = new(1, 1);
+    private readonly SemaphoreSlim _reportLock = new(1, 1);
+    private readonly SemaphoreSlim _historyLock = new(1, 1);
 
     public async Task<string> ReadRawAsync(CancellationToken cancellationToken)
     {
@@ -14,18 +14,17 @@ public sealed class ReportStore(string reportPath, string historyPath)
 
     public async Task<DismissalResult> DismissAsync(DismissalRequest request, CancellationToken cancellationToken)
     {
-        await reportLock.WaitAsync(cancellationToken);
+        await _reportLock.WaitAsync(cancellationToken);
         try
         {
             var report = await ReadReportAsync(cancellationToken);
-            var finding = report.Findings.SingleOrDefault(f => f.Id == request.Id);
-            if (finding is null)
-                return DismissalResult.NotFound;
+            var finding = report.Findings.SingleOrDefault(f => f.Id == request.Id)
+                ?? throw new KeyNotFoundException($"Finding '{request.Id}' was not found.");
 
             if (report.Decisions.TryGetValue(request.Id, out var existing) && existing.Action == "dismissed")
             {
                 await UpdateDismissalHistoryAsync(finding.SuggestionKey, existing.DecidedAt, cancellationToken);
-                return new DismissalResult(true, existing.DecidedAt);
+                return new DismissalResult(ParseDecidedAt(existing.DecidedAt));
             }
 
             var decidedAt = DateTime.UtcNow.ToString("O");
@@ -38,17 +37,17 @@ public sealed class ReportStore(string reportPath, string historyPath)
 
             await WriteReportAsync(report, cancellationToken);
             await UpdateDismissalHistoryAsync(finding.SuggestionKey, decidedAt, cancellationToken);
-            return new DismissalResult(false, decidedAt);
+            return new DismissalResult(ParseDecidedAt(decidedAt));
         }
         finally
         {
-            reportLock.Release();
+            _reportLock.Release();
         }
     }
 
     public async Task<string> ShipPromptAsync(ShipPromptRequest request, string transformed, CancellationToken cancellationToken)
     {
-        await reportLock.WaitAsync(cancellationToken);
+        await _reportLock.WaitAsync(cancellationToken);
         try
         {
             var report = await ReadReportAsync(cancellationToken);
@@ -77,7 +76,7 @@ public sealed class ReportStore(string reportPath, string historyPath)
         }
         finally
         {
-            reportLock.Release();
+            _reportLock.Release();
         }
     }
 
@@ -119,7 +118,7 @@ public sealed class ReportStore(string reportPath, string historyPath)
         if (string.IsNullOrEmpty(suggestionKey))
             return;
 
-        await historyLock.WaitAsync(cancellationToken);
+        await _historyLock.WaitAsync(cancellationToken);
         try
         {
             var historyDirectory = Path.GetDirectoryName(historyPath)!;
@@ -174,12 +173,12 @@ public sealed class ReportStore(string reportPath, string historyPath)
         }
         finally
         {
-            historyLock.Release();
+            _historyLock.Release();
         }
     }
+
+    private static DateTimeOffset ParseDecidedAt(string decidedAt) =>
+        DateTimeOffset.Parse(decidedAt, styles: System.Globalization.DateTimeStyles.AssumeUniversal);
 }
 
-public sealed record DismissalResult(bool IsDuplicate, string? DecidedAt)
-{
-    public static DismissalResult NotFound { get; } = new(false, null);
-}
+public sealed record DismissalResult(DateTimeOffset DecidedAt);

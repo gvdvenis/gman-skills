@@ -72,13 +72,31 @@ public sealed class ReportServerTests
 
             using var document = JsonDocument.Parse(await store.ReadRawAsync(CancellationToken.None));
             var decisions = document.RootElement.GetProperty("decisions");
-            Assert.IsFalse(dismissed.IsDuplicate);
-            Assert.IsTrue(duplicate.IsDuplicate);
             Assert.AreEqual(dismissed.DecidedAt, duplicate.DecidedAt);
             Assert.AreEqual("dismissed", decisions.GetProperty("f-001").GetProperty("action").GetString());
             Assert.AreEqual("queued", decisions.GetProperty("f-002").GetProperty("action").GetString());
             Assert.AreEqual("Prompt\n\nText", document.RootElement.GetProperty("shipped_prompt").GetProperty("transformed").GetString());
             Assert.IsTrue(File.Exists(historyPath));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public async Task ReportStore_DismissAsync_MissingFinding_ThrowsKeyNotFoundException()
+    {
+        var root = CreateTemporaryDirectory();
+        try
+        {
+            var reportPath = Path.Combine(root, "improvement-report-data.json");
+            var historyPath = Path.Combine(root, "history", "dismissed-keys.json");
+            await File.WriteAllTextAsync(reportPath, CreateReportJson());
+            var store = new ReportStore(reportPath, historyPath);
+
+            await Assert.ThrowsExactlyAsync<KeyNotFoundException>(
+                () => store.DismissAsync(new DismissalRequest { Id = "does-not-exist" }, CancellationToken.None));
         }
         finally
         {

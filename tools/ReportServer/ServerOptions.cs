@@ -15,13 +15,14 @@ public sealed record ServerOptions(
     {
         var port = int.TryParse(GetArgument(args, "--port"), out var parsedPort) ? parsedPort : 5173;
         var idleMinutes = int.TryParse(GetArgument(args, "--idle-minutes"), out var parsedIdleMinutes) ? parsedIdleMinutes : 10;
+        var reportPath = GetArgument(args, "--report-path");
         var bindAddress = GetArgument(args, "--bind") is { Length: > 0 } configuredAddress
             ? configuredAddress
             : "127.0.0.1";
-        var reportPath = GetArgument(args, "--report-path");
 
         if (port is < 1 or > 65535)
             throw new ServerOptionsException("--port must be between 1 and 65535.");
+
         if (idleMinutes < 1)
             throw new ServerOptionsException("--idle-minutes must be at least 1.");
 
@@ -46,10 +47,10 @@ public sealed record ServerOptions(
 
         if (string.IsNullOrWhiteSpace(reportPath))
             throw new ServerOptionsException("--report-path is required outside Development.");
-        if (!File.Exists(reportPath))
-            throw new ServerOptionsException($"Report file not found: {reportPath}");
 
-        return new ServerOptions(Path.GetFullPath(reportPath), port, bindAddress, idleMinutes, false);
+        return !File.Exists(reportPath)
+            ? throw new ServerOptionsException($"Report file not found: {reportPath}")
+            : new ServerOptions(Path.GetFullPath(reportPath), port, bindAddress, idleMinutes, false);
     }
 
     private static string? GetArgument(string[] args, string name)

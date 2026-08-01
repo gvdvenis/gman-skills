@@ -1,8 +1,9 @@
 using ElBruno.QRCodeGenerator.CLI;
 using ReportServer;
+using ReportServer.Endpoints;
+using ReportServer.Middleware;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -36,8 +37,15 @@ var historyPath = Path.Combine(
     "dismissed-keys.json");
 builder.Services.AddSingleton(new ReportStore(options.ReportPath, historyPath));
 
+builder.Services.AddValidation();
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.TypeInfoResolver = ReportJsonContext.Default);
+
 var app = builder.Build();
 
+app.UseExceptionHandler();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -57,72 +65,8 @@ app.Use(async (ctx, next) =>
     await next(ctx);
 });
 
-app.MapGet("/ping", () => Results.Json(
-    new ApiStatusResponse("ok"),
-    ReportJsonContext.Default.ApiStatusResponse));
-
-app.MapGet("/api/report", async (ReportStore reportStore, HttpContext context) =>
-{
-    var json = await reportStore.ReadRawAsync(context.RequestAborted);
-    return Results.Content(json, "application/json");
-});
-
-app.MapPost("/api/dismissals", async (ReportStore reportStore, HttpContext context) =>
-{
-    DismissalRequest? request;
-    try
-    {
-        request = await System.Text.Json.JsonSerializer.DeserializeAsync(
-            context.Request.Body,
-            ReportJsonContext.Default.DismissalRequest,
-            context.RequestAborted);
-    }
-    catch (System.Text.Json.JsonException)
-    {
-        return Results.Json(new ApiErrorResponse(false, "invalid JSON body"), ReportJsonContext.Default.ApiErrorResponse, statusCode: StatusCodes.Status400BadRequest);
-    }
-
-    if (request is null || string.IsNullOrWhiteSpace(request.Id))
-        return Results.Json(new ApiErrorResponse(false, "id is required"), ReportJsonContext.Default.ApiErrorResponse, statusCode: StatusCodes.Status400BadRequest);
-
-    var result = await reportStore.DismissAsync(request, context.RequestAborted);
-    if (result.DecidedAt is null)
-        return Results.Json(new ApiErrorResponse(false, "finding not found"), ReportJsonContext.Default.ApiErrorResponse, statusCode: StatusCodes.Status404NotFound);
-
-    return Results.Json(
-        new DismissalResponse(true, request.Id, result.DecidedAt),
-        ReportJsonContext.Default.DismissalResponse);
-});
-
-app.MapPost("/api/ship-prompt", async (ReportStore reportStore, HttpContext context) =>
-{
-    ShipPromptRequest? request;
-    try
-    {
-        request = await System.Text.Json.JsonSerializer.DeserializeAsync(
-            context.Request.Body,
-            ReportJsonContext.Default.ShipPromptRequest,
-            context.RequestAborted);
-    }
-    catch (System.Text.Json.JsonException)
-    {
-        return Results.Json(new ApiErrorResponse(false, "invalid JSON body"), ReportJsonContext.Default.ApiErrorResponse, statusCode: StatusCodes.Status400BadRequest);
-    }
-
-    if (request is null || string.IsNullOrWhiteSpace(request.Prompt))
-        return Results.Json(new ApiErrorResponse(false, "prompt is required"), ReportJsonContext.Default.ApiErrorResponse, statusCode: StatusCodes.Status400BadRequest);
-
-    var transformed = PromptCompressor.Compress(request.Prompt);
-    await reportStore.ShipPromptAsync(request, transformed, context.RequestAborted);
-    var clipboard = Convert.ToBase64String(Encoding.UTF8.GetBytes(transformed));
-    Console.Write($"\x1b]52;c;{clipboard}\x07");
-
-    return Results.Json(
-        new ShipPromptResponse(true, transformed, []),
-        ReportJsonContext.Default.ShipPromptResponse);
-});
-
-app.Map("/shutdown", context => ShutdownAsync(context, shutdown));
+app.MapReportEndpoints();
+app.MapSystemEndpoints(shutdown);
 
 _ = Task.Run(async () =>
 {
@@ -161,18 +105,6 @@ catch (OperationCanceledException)
 
 Console.WriteLine("[report-server] stopped.");
 return 0;
-
-static async Task ShutdownAsync(HttpContext context, CancellationTokenSource shutdown)
-{
-    context.Response.ContentType = "application/json";
-    await System.Text.Json.JsonSerializer.SerializeAsync(
-        context.Response.Body,
-        new ShutdownResponse("shutting down"),
-        ReportJsonContext.Default.ShutdownResponse,
-        context.RequestAborted);
-    await context.Response.CompleteAsync();
-    shutdown.Cancel();
-}
 
 static bool IsPortBound(string address, int port)
 {

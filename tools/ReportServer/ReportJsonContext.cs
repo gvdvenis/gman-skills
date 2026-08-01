@@ -12,7 +12,6 @@ namespace ReportServer;
 [JsonSerializable(typeof(List<DismissalHistoryEntry>))]
 [JsonSerializable(typeof(ApiStatusResponse))]
 [JsonSerializable(typeof(ShutdownResponse))]
-[JsonSerializable(typeof(ApiErrorResponse))]
 [JsonSerializable(typeof(DismissalResponse))]
 [JsonSerializable(typeof(ShipPromptResponse))]
 internal partial class ReportJsonContext : JsonSerializerContext;

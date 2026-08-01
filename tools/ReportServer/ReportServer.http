@@ -1,0 +1,66 @@
+# ReportServer .http — exercise every endpoint.
+#
+# The port must match the server's --port flag / launchSettings.json (default 5173).
+@baseUrl = http://localhost:5173
+
+### Health check — GET /ping
+GET {{baseUrl}}/ping
+
+### Get the raw improvement report — GET /api/report
+GET {{baseUrl}}/api/report
+
+### Dismiss a finding by id — POST /api/dismissals
+POST {{baseUrl}}/api/dismissals
+Content-Type: application/json
+
+{
+  "id": "f-001",
+  "dismissed_reason": "not applicable"
+}
+
+### Dismiss the same finding again — idempotent, returns the original decided_at
+POST {{baseUrl}}/api/dismissals
+Content-Type: application/json
+
+{
+  "id": "f-001"
+}
+
+### Error path — dismiss a non-existent finding id (expect 404 Problem Details)
+POST {{baseUrl}}/api/dismissals
+Content-Type: application/json
+
+{
+  "id": "does-not-exist"
+}
+
+### Error path — dismiss with a missing id field (expect 400 validation Problem Details)
+POST {{baseUrl}}/api/dismissals
+Content-Type: application/json
+
+{
+  "dismissed_reason": "no id supplied"
+}
+
+### Ship (compress and persist) the assembled prompt — POST /api/ship-prompt
+POST {{baseUrl}}/api/ship-prompt
+Content-Type: application/json
+
+{
+  "prompt": "## Heading\n\n**Bold** text with `code`.\n\n---\n\nBody paragraph.",
+  "queued_ids": [
+    "f-001",
+    "f-002"
+  ]
+}
+
+### Error path — ship with missing prompt field (expect 400 validation Problem Details)
+POST {{baseUrl}}/api/ship-prompt
+Content-Type: application/json
+
+{
+  "queued_ids": []
+}
+
+### Gracefully shut down the server — GET /shutdown
+GET {{baseUrl}}/shutdown

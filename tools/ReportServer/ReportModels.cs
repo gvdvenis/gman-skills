@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -85,24 +86,6 @@ public sealed class ShippedPrompt
     public required string ShippedAt { get; set; }
 }
 
-public sealed class DismissalRequest
-{
-    [JsonPropertyName("id")]
-    public required string Id { get; set; }
-
-    [JsonPropertyName("dismissed_reason")]
-    public string? DismissedReason { get; set; }
-}
-
-public sealed class ShipPromptRequest
-{
-    [JsonPropertyName("prompt")]
-    public required string Prompt { get; set; }
-
-    [JsonPropertyName("queued_ids")]
-    public List<string> QueuedIds { get; set; } = [];
-}
-
 public sealed class DismissalHistoryEntry
 {
     [JsonPropertyName("suggestion_key")]
@@ -112,8 +95,36 @@ public sealed class DismissalHistoryEntry
     public required string DismissedAt { get; set; }
 }
 
+/// <summary>Server health-check response.</summary>
 public sealed record ApiStatusResponse(string Status);
+
+/// <summary>Shutdown acknowledgement response.</summary>
 public sealed record ShutdownResponse(string Message);
-public sealed record ApiErrorResponse(bool Ok, string Error);
-public sealed record DismissalResponse(bool Ok, string Id, string DecidedAt);
-public sealed record ShipPromptResponse(bool Ok, string Transformed, List<string> Warnings);
+
+/// <summary>Request to dismiss a single finding by id.</summary>
+public sealed record DismissalRequest
+{
+    [Required]
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("dismissed_reason")]
+    public string? DismissedReason { get; init; }
+}
+
+/// <summary>Request to ship (compress and persist) the assembled prompt.</summary>
+public sealed record ShipPromptRequest
+{
+    [Required]
+    [JsonPropertyName("prompt")]
+    public required string Prompt { get; init; }
+
+    [JsonPropertyName("queued_ids")]
+    public List<string> QueuedIds { get; init; } = [];
+}
+
+/// <summary>Response confirming a finding dismissal decision was recorded.</summary>
+public sealed record DismissalResponse(string Id, DateTimeOffset DecidedAt);
+
+/// <summary>Response containing the compressed prompt and any warnings.</summary>
+public sealed record ShipPromptResponse(string Transformed, List<string> Warnings);

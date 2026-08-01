@@ -623,7 +623,7 @@
   async function loadReport() {
     try {
       const res = await fetch('/api/report');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw await problemDetailsError(res);
       reportData = await res.json();
       renderOrigin(reportData.origin);
       renderFindings(reportData.findings, reportData.decisions ?? {});
@@ -877,6 +877,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptText, queued_ids: Array.from(queue) })
       });
+      if (!res.ok) throw await problemDetailsError(res);
       const data = await res.json();
       const btn = document.getElementById('copy-llm');
       btn.textContent = '✓ Shipped!';
@@ -906,6 +907,17 @@
     el.textContent = msg;
     el.style.display = 'block';
     document.getElementById('loading').style.display = 'none';
+  }
+
+  // Read an RFC 7807 Problem Details body from a non-2xx response into an Error.
+  async function problemDetailsError(res) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const problem = await res.json();
+      if (problem.title) detail = problem.title;
+      if (problem.detail) detail += `: ${problem.detail}`;
+    } catch { /* not JSON, keep status message */ }
+    return new Error(detail);
   }
 
   // ── file:// degraded-state banner ─────────────────────────────────────────
