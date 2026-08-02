@@ -12,53 +12,66 @@ user-invokable: true
 
 First-time setup for the gman-skills package. Run once after `npx skills add gvdvenis/gman-skills`.
 
-## Workflow
-
-### 1. Check dotnet-blazor plugin
+## Step 1 — Check and install the dotnet-blazor plugin
 
 Run `copilot plugin list` and look for `dotnet-blazor` in the output.
 
-- **Missing**: Install it in two steps:
-  1. `copilot plugin marketplace add dotnet/skills`
-  2. `copilot plugin install dotnet-blazor@dotnet-agent-skills`
-- **Present**: Skip — note that the plugin is already installed.
+If **missing**, install it in two steps:
+1. `copilot plugin marketplace add dotnet/skills`
+2. `copilot plugin install dotnet-blazor@dotnet-agent-skills`
 
-### 2. Check report-server binary
+If **present**, skip — it is already installed.
 
-Check whether the report-server binary exists at `~/.copilot/gman-skills/bin/`.
+Record the result: `installed` (was just installed), `present` (was already there), or `failed`.
 
-- **Windows**: look for `report-server.exe`.
-- **Linux / macOS**: look for `report-server` (no extension).
+**Done when:** the dotnet-blazor plugin is installed or confirmed present, or the install failed
+and the error is recorded.
 
-If the binary is **present**, skip the download and note it is already installed.
+## Step 2 — Check and download the report-server binary
 
-If the binary is **missing**, run the platform-appropriate download script:
+Check whether the report-server binary exists at `~/.copilot/gman-skills/bin/`:
+- **Windows**: `report-server.exe`
+- **Linux / macOS**: `report-server` (no extension)
 
-| Platform | Script |
-|---|---|
-| Windows | `scripts/setup-report-server.ps1` |
-| Linux / macOS | `scripts/setup-report-server.sh` |
+If **present**, skip — it is already installed. Record `present`.
 
-The script queries the GitHub Releases API (`gvdvenis/gman-skills`), downloads the matching
-asset (`report-server-{os}-{arch}.zip`), and extracts the binary to
-`~/.copilot/gman-skills/bin/`.
+If **missing**, run the platform-appropriate download script from this skill's `scripts/` directory:
+- **Windows**: `scripts/setup-report-server.ps1`
+- **Linux / macOS**: `scripts/setup-report-server.sh`
 
-### 3. Print summary
+The script detects OS + architecture, downloads the matching asset from the `gvdvenis/gman-skills`
+GitHub Releases, and extracts the binary to `~/.copilot/gman-skills/bin/`.
 
-Print a summary table:
+Record the result: `downloaded` (was just downloaded), `present` (was already there), or `failed`.
 
-| Component | Status |
-|---|---|
-| dotnet-blazor plugin | `installed` / `was installed` / `failed` |
-| report-server binary | `present` / `downloaded` / `failed` |
+**Done when:** the binary exists at `~/.copilot/gman-skills/bin/` or the download failed and the
+error is recorded.
 
-List any follow-up actions the user should take (e.g. restart the CLI, build from source).
+## Step 3 — Print the summary
 
-## Preflight check
+Print a summary table so the user can see what happened. This is mandatory — the user needs
+confirmation that setup worked:
 
-For a non-blocking dependency check (always exits 0), use the check-deps scripts:
+```
+[setup-gman-skills] Setup complete
 
-- Windows: `scripts/check-deps.ps1`
-- Linux / macOS: `scripts/check-deps.sh`
+  Component            Status
+  ───────────────────────────────
+  dotnet-blazor plugin  installed
+  report-server binary  downloaded
+```
 
-These print warnings for missing components but never fail.
+If any component failed, print the failure reason and a suggested fix:
+
+```
+[setup-gman-skills] Setup complete with warnings
+
+  Component            Status     Note
+  ───────────────────────────────────────────────
+  dotnet-blazor plugin  present
+  report-server binary  failed     No GitHub Release found. Build from source:
+                                    cd src/report-server && dotnet publish -c Release -r win-x64
+                                    Then copy the binary to ~/.copilot/gman-skills/bin/
+```
+
+**Done when:** the summary table is printed with every component's status visible.

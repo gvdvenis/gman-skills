@@ -7,7 +7,7 @@
 #   2. /setup-gman-skills runs and confirms dotnet-blazor + report-server binary present.
 #   3. copilot -p invocation with --self-improve produces a run ID matching run-YYYYMMDD-HHMM
 #      in the first output line.
-#   4. improvement-report-data.json exists at ~/.copilot/blazor-orchestration/runs/<run_id>/.
+#   4. improvement-report-data.json exists at ~/.blazor-architect/runs/<run_id>/.
 #   5. Report-server responds on http://127.0.0.1:5173/api/report during the --self-improve run.
 #   6. copilot -p invocation without --self-improve produces no improvement-report-data.json
 #      and no server on port 5173.
@@ -222,7 +222,7 @@ fi
 
 # Check improvement-report-data.json exists
 if [ -n "$RUN_ID" ]; then
-    run_dir="$HOME/.copilot/blazor-orchestration/runs/$RUN_ID"
+    run_dir="$HOME/.blazor-architect/runs/$RUN_ID"
     report_file="$run_dir/improvement-report-data.json"
 
     if [ -f "$report_file" ]; then
@@ -260,7 +260,7 @@ else
     no_improve_run_id="$(echo "$first_line" | grep -oE "run-[0-9]{8}-[0-9]{4}" | head -1 || true)"
 
     # Check no improvement-report-data.json
-    runs_root="$HOME/.copilot/blazor-orchestration/runs"
+    runs_root="$HOME/.blazor-architect/runs"
     found_report=false
 
     if [ -n "$no_improve_run_id" ]; then

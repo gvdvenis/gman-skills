@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "suggestion-history",
-  "description": "CLI-owned cross-run suggestion history. Stored at ~/.copilot/blazor-orchestration/suggestion-history.json. Append-only records of user decisions for suggestion_key-based dedup weighting and dismissal penalty application. Never committed to source control — local machine only.",
+  "description": "CLI-owned cross-run suggestion history. Stored at ~/.self-improve-reports/blazor-architect/suggestion-history.json. Append-only records of user decisions for suggestion_key-based dedup weighting and dismissal penalty application. Never committed to source control — local machine only.",
   "type": "object",
   "required": ["schema_version", "entries"],
   "additionalProperties": false,

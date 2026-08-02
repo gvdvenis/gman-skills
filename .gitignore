@@ -5,6 +5,9 @@
 # Session / scratch
 .scratch/
 
+# Eval / workspace
+skills/blazor-architect-workspace/
+
 # .NET build artifacts
 src/report-server/**/bin/
 src/report-server/**/obj/

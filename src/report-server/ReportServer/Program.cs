@@ -32,7 +32,7 @@ builder.WebHost.UseUrls($"http://{options.BindAddress}:{options.Port}");
 var historyPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
     ".copilot",
-    "blazor-orchestration",
+    "self-improve-reports",
     "history",
     "dismissed-keys.json");
 builder.Services.AddSingleton(new ReportStore(options.ReportPath, historyPath));

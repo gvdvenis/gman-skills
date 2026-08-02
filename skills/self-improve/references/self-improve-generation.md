@@ -17,7 +17,7 @@ This document specifies the deterministic rules the CLI orchestrator follows to 
 ## Run directory
 
 ```
-~/.copilot/blazor-orchestration/runs/<run_id>/improvement-report-data.json
+~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
 ```
 
 Where `<run_id>` is the run identifier in `run-YYYYMMDD-HHMM` format.
@@ -61,7 +61,7 @@ suggestion_key = "<category>:<target_surface>:<normalized_intent>"
 
 Before writing `findings[]`, the orchestrator folds all raw findings from the current run
 against the cross-run suggestion history (if it exists at
-`~/.copilot/blazor-orchestration/suggestion-history.json`).
+`~/.self-improve-reports/blazor-architect/suggestion-history.json`).
 
 **Fold merge rules:**
 
@@ -126,7 +126,7 @@ descending, then by `first_seen` ascending (older issues first).
 ## Dismissal and history-weight application
 
 1. Collect all `suggestion_key` values from the current run's raw findings.
-2. Load `~/.copilot/blazor-orchestration/suggestion-history.json` (if it exists).
+2. Load `~/.self-improve-reports/blazor-architect/suggestion-history.json` (if it exists).
 3. For each raw finding key: look up its most recent history entry.
 4. Apply `never_again` exclusion first (hard exclude).
 5. Apply `history_weight` to `ranking_score` (soft deprioritize for active dismissal cooldown).
@@ -184,7 +184,7 @@ When the readiness signal is detected, the CLI stages the file alongside any imp
 changes from the run:
 
 ```
-git add ~/.copilot/blazor-orchestration/runs/<run_id>/improvement-report-data.json
+git add ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
 ```
 
 ---

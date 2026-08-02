@@ -51,7 +51,7 @@
     "run_directory": {
       "type": "string",
       "description": "Absolute path to the run artifact directory under the user-level Copilot directory.",
-      "example": "~/.copilot/blazor-orchestration/runs/<run_id>/"
+      "example": "~/.self-improve-reports/blazor-architect/runs/<run_id>/"
     }
   }
 }

@@ -63,7 +63,7 @@ Specialists:
 Each run uses a unique `<run_id>` and writes locally to:
 
 ```text
-~/.copilot/blazor-orchestration/runs/<run_id>/
+~/.blazor-architect/runs/<run_id>/
   events.jsonl
   reports/<agent-id>.json
   analysis.json

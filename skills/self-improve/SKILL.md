@@ -2,39 +2,43 @@
 name: self-improve
 user-invokable: false
 description: >
-  Loaded by blazor-architect when --self-improve is active. Handles improvement report
-  generation, C# server auto-launch, and CLI staging. Should not be invoked directly.
+  Loaded by blazor-architect when --self-improve is active. Not user-invokable — appears in the
+    skills list but can only be loaded by blazor-architect, not called directly. Handles improvement
+    report generation, C# server auto-launch, and CLI staging.
 ---
 
 # Self-improve skill
 
-This skill is activated by `blazor-architect` when the `--self-improve` flag is set. It runs
-**after** all specialist work and the review loop have completed. It should never be invoked
-directly by the user.
+Activated by `blazor-architect` when `--self-improve` is set. Runs after all specialist work and
+the review loop have completed.
 
-## Report generation algorithm
+## Step 1 — Create the run directory
 
-The complete ordered algorithm for generating `improvement-report-data.json` is specified in
-`references/self-improve-generation.md`. Consult that document for:
+Create `~/.self-improve-reports/blazor-architect/runs/<run_id>/` if it does not exist.
 
-- `suggestion_key` derivation recipe (`<category>:<target_surface>:<normalized_intent>`)
-- Cross-run dedup fold rules (evidence union, max severity, recurrence count, first/last seen)
-- Ranking formula (`base_severity_weight + recurrence_boost + history_weight`)
-- Dismissal and history-weight application (`never_again` exclusion, cooldown penalty)
-- Full step-by-step generation algorithm (14 ordered steps)
+**Done when:** the run directory exists on disk.
 
-Do **not** inline the algorithm here — `references/self-improve-generation.md` is the authoritative
-source.
+## Step 2 — Generate the improvement report
 
-## Report data file
+Consult `references/self-improve-generation.md` for the complete algorithm. The ordered steps:
 
-Write `improvement-report-data.json` to:
+1. Collect all `self_diagnosis.issues` entries from specialist reports in the run.
+2. Map each to a raw finding (title, summary, category, severity, expected_impact, prompt_fragment, evidence).
+3. Derive `suggestion_key` for each finding (`<category>:<target_surface>:<normalized_intent>`).
+4. Load `~/.self-improve-reports/blazor-architect/suggestion-history.json` if present.
+5. Hard-exclude findings with `never_again` history entries.
+6. Group by `suggestion_key`, fold using merge rules (max severity, evidence union, recurrence count).
+7. Apply `history_weight` from most recent decision per key.
+8. Compute `ranking_score` (base_severity_weight + recurrence_boost + history_weight).
+9. Sort by severity group, then ranking_score descending, then first_seen ascending.
+10. Assign sequential ids (f-001, f-002, ...).
+11. Build the origin block from current run context.
+12. Write `improvement-report-data.json` to the run directory.
 
-```
-~/.copilot/blazor-orchestration/runs/<run_id>/improvement-report-data.json
-```
+The file must conform to `references/improvement-report-data-schema.json` (schema version 1.1).
+A valid example is at `references/improvement-report-data-example.json`.
 
-The initial file shape written at generation time:
+Initial file shape:
 
 ```json
 {
@@ -53,78 +57,66 @@ The initial file shape written at generation time:
 }
 ```
 
-`decisions` is always an empty object at generation time. `shipped_prompt` is always `null` at
-generation time. Both are written by the C# server after user actions.
+`decisions` and `shipped_prompt` are always empty/null at generation time — the C# server writes
+them after user actions.
 
-The file must conform to `references/improvement-report-data-schema.json` (schema version 1.1).
-A valid populated example is at `references/improvement-report-data-example.json`.
+**Done when:** `improvement-report-data.json` is written to the run directory with valid findings
+(or an empty findings array if no self-diagnosis issues were collected).
 
-## Server auto-launch
+## Step 3 — Launch the report-server
 
-When `--self-improve` is active, the C# server auto-launches on fixed port `5173`:
+The report-server binary lives at `~/.copilot/gman-skills/bin/report-server.exe` (Windows) or
+`~/.copilot/gman-skills/bin/report-server` (Linux/macOS). Launch it with the report file path:
 
-- **Bind address**: loopback `127.0.0.1` by default; use `0.0.0.0` when mobile access is preferred
-  and the user has configured that in skill preferences.
-- **Port conflict**: if port 5173 is already bound, assume the server is already running, log a
-  warning, and continue without launching a second instance.
-- **Lifecycle**: the server stays alive until one of:
-  - `GET /shutdown` is called, or
-  - an idle timeout elapses after the browser first connects, or
-  - the terminal session ends.
-- **API surface**: `GET /api/report`, `GET /ping`, `POST /api/ship-prompt`,
-  `POST /api/dismissals`, `GET /shutdown`.
-
-The server is not implemented in this skill — it is a separate C# project. This skill describes
-the launch contract and API surface for reference.
-
-## CLI staging readiness signal
-
-After the C# server session ends (server shutdown or idle timeout), check the run's
-`improvement-report-data.json` for staging readiness:
-
-- **Ready** when `decisions` is non-empty **OR** `shipped_prompt` is non-null.
-- When ready, stage the file:
-
+**Windows:**
 ```
-git add ~/.copilot/blazor-orchestration/runs/<run_id>/improvement-report-data.json
+~/.copilot/gman-skills/bin/report-server.exe --report-path ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
 ```
 
-See `references/self-improve-generation.md § CLI staging readiness signal` for full details.
-
-## Conflict flow
-
-If `improvement-report-data.json` for the current run is already git-tracked (previously staged or
-committed) and has local modifications (e.g. the user re-ran under `--self-improve` for the same
-`run_id`), present an explicit conflict resolution prompt before staging:
-
+**Linux / macOS:**
 ```
-improvement-report-data.json for run-YYYYMMDD-HHMM has local changes.
-Choose an action:
-  [c] Continue — keep existing file as-is, do not restage
-  [s] Stash — move existing file to improvement-report-data.json.bak before staging new
-  [d] Discard — overwrite existing file with newly generated version
+~/.copilot/gman-skills/bin/report-server --report-path ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
 ```
 
-- **Continue**: no file operation; user manages the conflict manually.
-- **Stash**: write existing file to `.bak`, then write and stage the new file.
-- **Discard**: overwrite and stage without preserving the existing file.
+The server listens on `127.0.0.1:5173` by default. If the port is already bound, assume the server
+is already running — log a warning and continue (do not launch a second instance).
 
-If the prompt receives no response within 30 seconds (non-interactive terminal), default to
-**Continue** and log the skipped staging decision in the run artifact.
+After launching, open the browser to `http://127.0.0.1:5173` so the user can see the report.
+Announce the URL clearly:
 
-See `references/self-improve-generation.md § Conflict flow` for full details.
+```
+[blazor-architect] Self-improvement report ready at http://127.0.0.1:5173
+  report file: ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
+  server PID: <pid>
+```
+
+The server stays alive until `GET /shutdown` is called, an idle timeout elapses after the browser
+connects, or the terminal session ends. API surface: `GET /api/report`, `GET /ping`,
+`POST /api/ship-prompt`, `POST /api/dismissals`, `GET /shutdown`.
+
+If the binary is missing, print a warning telling the user to run `/setup-gman-skills` and continue
+without the server — the report file is still useful on its own.
+
+**Done when:** the server is running and responding on port 5173, or the binary is missing and a
+warning has been printed.
+
+## Step 4 — Staging readiness (after server session ends)
+
+After the server shuts down (user calls `GET /shutdown`, idle timeout, or terminal end), check the
+report file for staging readiness:
+
+- **Ready** when `decisions` is non-empty OR `shipped_prompt` is non-null.
+- When ready, stage: `git add ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json`
+
+If the file is already git-tracked and has local modifications, present the conflict flow
+(continue / stash / discard) from `references/self-improve-generation.md § Conflict flow`. Default
+to "Continue" after 30 seconds of no response.
+
+**Done when:** staging is complete or the file is not ready to stage.
 
 ## Suggestion history
 
-The cross-run suggestion history store lives at:
-
-```
-~/.copilot/blazor-orchestration/suggestion-history.json
-```
-
-This is a CLI-owned, append-only, local-machine-only file that records user decisions
-(`accepted`, `dismissed`, `never_again`) for each `suggestion_key` across runs. It is never
-committed to source control.
-
-See `references/suggestion-history-schema.json` for the schema (version 1.0). The history is
-loaded during report generation to apply dedup folding, ranking weights, and dismissal penalties.
+The cross-run suggestion history store lives at
+`~/.self-improve-reports/blazor-architect/suggestion-history.json`. It records user decisions
+(`accepted`, `dismissed`, `never_again`) per `suggestion_key` across runs. It is never committed
+to source control. See `references/suggestion-history-schema.json` for the schema.
