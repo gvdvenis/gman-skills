@@ -172,7 +172,7 @@ Write-Host ""
 Write-Host "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary" -ForegroundColor Yellow
 
 Test-Contract "setup-gman-skills" {
-    $setupOutput = & $CopilotBin -p --no-ask-user --allow-all-tools "/setup-gman-skills" 2>&1 | Out-String
+    $setupOutput = & $CopilotBin -p "/setup-gman-skills" --no-ask-user --allow-all-tools 2>&1 | Out-String
     Write-Host $setupOutput
 
     if ($setupOutput -match "dotnet-blazor.*installed|dotnet-blazor.*present|dotnet-blazor.*already") {
@@ -210,8 +210,8 @@ Test-Contract "self-improve-run-id-and-server" {
     Write-Host "  Starting copilot -p with --self-improve (background)..."
     $job = Start-Job -ScriptBlock {
         param($CopilotBin, $ProjectDir)
-        & $CopilotBin -p --no-ask-user --allow-all-tools `
-            "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" `
+        & $CopilotBin -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" `
+            --no-ask-user --allow-all-tools `
             --add-dir $ProjectDir 2>&1
     } -ArgumentList $CopilotBin, $projectDir
 
@@ -299,8 +299,8 @@ Test-Contract "no-self-improve-run-id" {
         return
     }
 
-    $noImproveOutput = & $CopilotBin -p --no-ask-user --allow-all-tools `
-        "/blazor-architect add a simple greeting component" `
+    $noImproveOutput = & $CopilotBin -p "/blazor-architect add a simple greeting component" `
+        --no-ask-user --allow-all-tools `
         --add-dir $projectDir 2>&1 | Out-String
     Write-Host $noImproveOutput
 

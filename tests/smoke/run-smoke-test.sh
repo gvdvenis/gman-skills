@@ -139,7 +139,7 @@ done
 echo ""
 echo "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary"
 
-setup_output="$("$COPILOT_BIN" -p --no-ask-user --allow-all-tools "/setup-gman-skills" 2>&1 || true)"
+setup_output="$("$COPILOT_BIN" -p "/setup-gman-skills" --no-ask-user --allow-all-tools 2>&1 || true)"
 echo "$setup_output"
 
 if echo "$setup_output" | grep -qE "dotnet-blazor.*(installed|present|already)"; then
@@ -172,8 +172,8 @@ echo "  Creating temp Blazor project at: $PROJECT_DIR"
 # Start copilot in the background so we can poll the server concurrently
 echo "  Starting copilot -p with --self-improve (background)..."
 copilot_log="$(mktemp)"
-"$COPILOT_BIN" -p --no-ask-user --allow-all-tools \
-    "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" \
+"$COPILOT_BIN" -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" \
+    --no-ask-user --allow-all-tools \
     --add-dir "$PROJECT_DIR" >"$copilot_log" 2>&1 &
 copilot_pid=$!
 
@@ -249,8 +249,8 @@ echo "[6] copilot -p without --self-improve: no report, no server"
 if [ -z "$PROJECT_DIR" ]; then
     fail "no self-improve: temp project not created (previous step failed)"
 else
-    no_improve_output="$("$COPILOT_BIN" -p --no-ask-user --allow-all-tools \
-        "/blazor-architect add a simple greeting component" \
+    no_improve_output="$("$COPILOT_BIN" -p "/blazor-architect add a simple greeting component" \
+        --no-ask-user --allow-all-tools \
         --add-dir "$PROJECT_DIR" 2>&1 || true)"
     echo "$no_improve_output"
 
