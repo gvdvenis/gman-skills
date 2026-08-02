@@ -8,6 +8,10 @@
 # Eval / workspace
 skills/blazor-architect-workspace/
 
+# npx skills project-level install (we install globally, not in-repo)
+.agents/
+skills-lock.json
+
 # .NET build artifacts
 src/report-server/**/bin/
 src/report-server/**/obj/
