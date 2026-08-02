@@ -45,7 +45,7 @@ jobs:
 
       - name: Install Copilot CLI
         run: |
-          npm install -g @github/copilot-cli
+          npm install -g @github/copilot
           copilot --version
 
       - name: Run smoke test (Windows)
