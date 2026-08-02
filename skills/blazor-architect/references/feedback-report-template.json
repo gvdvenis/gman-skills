@@ -1,0 +1,139 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Specialist Feedback Report",
+  "description": "Strict schema v1.0 for specialist report-back. Orchestrator validates every report against this schema. On first validation failure the orchestrator requests one repair retry with a schema-only JSON prompt; on second failure the lane is marked failed_report_schema, raw output is preserved as a sidecar file in the run artifacts directory (outside this schema), and the lane is treated with status: failed in the run summary.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "specialist",
+    "status",
+    "summary",
+    "files_changed",
+    "validation",
+    "next_action"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version. Must be '1.0' for this revision.",
+      "const": "1.0"
+    },
+    "specialist": {
+      "type": "string",
+      "description": "The lane name of the specialist that produced this report (e.g. 'blazor-component-architect')."
+    },
+    "status": {
+      "type": "string",
+      "description": "Terminal status of the specialist's work.",
+      "enum": ["success", "blocked", "failed"]
+    },
+    "summary": {
+      "type": "string",
+      "description": "1-3 sentence plain-language description of what was done (or why work is blocked/failed)."
+    },
+    "files_changed": {
+      "type": "array",
+      "description": "All files the specialist touched. Empty array is allowed when no files were changed.",
+      "items": {
+        "type": "object",
+        "required": ["path", "change", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Repo-relative path (e.g. 'src/Web/Pages/Checkout.razor')."
+          },
+          "change": {
+            "type": "string",
+            "enum": ["created", "updated", "deleted", "none"]
+          },
+          "reason": {
+            "type": "string",
+            "description": "Short explanation of why this file was changed."
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Describes whether and how the specialist validated its own output.",
+      "required": ["performed", "commands", "result", "evidence"],
+      "additionalProperties": false,
+      "properties": {
+        "performed": {
+          "type": "boolean"
+        },
+        "commands": {
+          "type": "array",
+          "description": "Exact commands run. Empty when performed is false.",
+          "items": { "type": "string" }
+        },
+        "result": {
+          "type": "string",
+          "enum": ["pass", "fail", "not_run"]
+        },
+        "evidence": {
+          "type": "string",
+          "description": "Short summary of validation outcome. Include first failure signal when result is 'fail'."
+        }
+      }
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Explicit handoff instruction or unblock step for the orchestrator."
+    },
+    "token_estimate": {
+      "type": "object",
+      "description": "Optional. Coarse token usage to nearest 100. Omit entirely when not applicable.",
+      "required": ["input", "output", "total"],
+      "additionalProperties": false,
+      "properties": {
+        "input":  { "type": "integer" },
+        "output": { "type": "integer" },
+        "total":  { "type": "integer" }
+      }
+    },
+    "self_diagnosis": {
+      "type": "object",
+      "description": "Optional. Include ONLY when --self-improve flag is active.",
+      "required": ["issues", "improvements", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "improvements": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["low", "medium", "high"]
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "schema_version": "1.0",
+      "specialist": "blazor-component-architect",
+      "status": "success",
+      "summary": "Extracted OrderSummaryCard and PaymentMethodPicker from Checkout.razor and replaced inline markup with parameterized components.",
+      "files_changed": [
+        { "path": "src/Web/Pages/Checkout.razor", "change": "updated", "reason": "Replaced duplicated markup with component usage." },
+        { "path": "src/Web/Components/OrderSummaryCard.razor", "change": "created", "reason": "New reusable summary display component." },
+        { "path": "src/Web/Components/PaymentMethodPicker.razor", "change": "created", "reason": "New reusable payment method selector." }
+      ],
+      "validation": {
+        "performed": true,
+        "commands": ["dotnet build src/Web/Web.csproj", "dotnet test tests/Web.Tests/Web.Tests.csproj --filter Checkout"],
+        "result": "pass",
+        "evidence": "Build succeeded; 6/6 Checkout tests passed."
+      },
+      "next_action": "Orchestrator can proceed to telemetry artifact generation and final user handoff.",
+      "token_estimate": { "input": 2200, "output": 900, "total": 3100 }
+    }
+  ]
+}

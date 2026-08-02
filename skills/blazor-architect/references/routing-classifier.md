@@ -1,6 +1,6 @@
 # Route classifier
 
-This is the fixed classifier table for the `blazor-orchestrator`. Each task category maps to the
+This is the fixed classifier table for `blazor-architect`. Each task category maps to the
 same lane and execution mode on every run. Any override must be recorded in the run artifact so
 behaviour stays auditable.
 
