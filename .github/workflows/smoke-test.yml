@@ -1,0 +1,65 @@
+name: Smoke test
+
+# Headless smoke test for the gman-skills install-to-run path.
+# Runs the PowerShell script on Windows and the bash script on Linux.
+# Both scripts verify the same contract points described in
+# .scratch/gman-skills-reorg/issues/10-headless-smoke-test.md
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'skills/**'
+      - 'src/report-server/**'
+      - 'tests/smoke/**'
+      - '.github/workflows/smoke-test.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'src/report-server/**'
+      - 'tests/smoke/**'
+      - '.github/workflows/smoke-test.yml'
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Copilot CLI
+        run: |
+          npm install -g @github/copilot-cli
+          copilot --version
+
+      - name: Run smoke test (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pwsh -File tests/smoke/run-smoke-test.ps1
+
+      - name: Run smoke test (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x tests/smoke/run-smoke-test.sh
+          bash tests/smoke/run-smoke-test.sh
