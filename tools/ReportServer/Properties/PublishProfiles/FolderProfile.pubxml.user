@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- https://go.microsoft.com/fwlink/?LinkID=208121. -->
-<Project>
-  <PropertyGroup>
-    <_PublishTargetUrl>C:\Users\g.vd.venis\.copilot\packages\blazor-orchestration-package\tools\ReportServer\bin\publish</_PublishTargetUrl>
-    <History>True|2026-08-01T00:32:45.5841143Z||;True|2026-08-01T02:31:14.1504052+02:00||;False|2026-08-01T02:30:31.2843207+02:00||;False|2026-08-01T02:29:52.1344746+02:00||;True|2026-08-01T02:24:07.4110789+02:00||;</History>
-    <LastFailureDetails />
-  </PropertyGroup>
-</Project>

@@ -1,8 +1,16 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+# gman-skills .gitignore
 ################################################################################
 
-appsettings.Development.json
-bin/
-obj/
+# Session / scratch
+.scratch/
+
+# .NET build artifacts
+src/report-server/**/bin/
+src/report-server/**/obj/
+src/report-server/**/.vs/
+src/**/*.user
+src/**/TestResults/
+
+# IDE
 .vs/
