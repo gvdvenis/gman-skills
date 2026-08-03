@@ -24,6 +24,11 @@
     <EmbeddedResource Remove="ReportServer.Tests\**" />
   </ItemGroup>
 
+    <ItemGroup>
+      <EmbeddedResource Include="wwwroot\index.html" />
+      <Content Remove="wwwroot\**" />
+    </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="ElBruno.QRCodeGenerator.CLI" Version="1.1.0" />
   </ItemGroup>

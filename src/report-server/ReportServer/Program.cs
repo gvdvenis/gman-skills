@@ -46,8 +46,6 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 var app = builder.Build();
 
 app.UseExceptionHandler();
-app.UseDefaultFiles();
-app.UseStaticFiles();
 
 var browserConnected = false;
 var lastActivity = DateTime.UtcNow;
@@ -67,6 +65,7 @@ app.Use(async (ctx, next) =>
 
 app.MapReportEndpoints();
 app.MapSystemEndpoints(shutdown);
+app.MapEmbeddedHtml();
 
 _ = Task.Run(async () =>
 {
