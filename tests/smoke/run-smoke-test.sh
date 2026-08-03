@@ -176,16 +176,18 @@ copilot_log="$(mktemp)"
     --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" >"$copilot_log" 2>&1 &
 copilot_pid=$!
 
-# Poll for report-server on port 5173 while copilot is running
+# Poll for report-server on port 5173 while copilot is running AND for a short
+# period after it finishes — the server may be launched near the end of the run.
 responded=false
-for i in $(seq 1 30); do
-    if ! kill -0 "$copilot_pid" 2>/dev/null && [ "$i" -gt 5 ]; then break; fi
+for i in $(seq 1 40); do
     sleep 3
     if curl -sf -o /dev/null "http://127.0.0.1:5173/api/report" 2>/dev/null; then
         responded=true
         echo "  [INFO] report-server responded during copilot run (poll $i)"
         break
     fi
+    # Stop polling if copilot finished AND we've done at least 10 extra polls
+    if ! kill -0 "$copilot_pid" 2>/dev/null && [ "$i" -gt 15 ]; then break; fi
 done
 
 # Wait for copilot to finish (generous timeout)
@@ -211,11 +213,17 @@ fi
 
 if [ "$responded" = "true" ]; then
     pass "report-server responded on http://127.0.0.1:5173/api/report during the run"
-    # Shutdown the server so the next contract test has a clean port
-    curl -sf -o /dev/null "http://127.0.0.1:5173/shutdown" 2>/dev/null || true
-    sleep 2
 else
     fail "report-server did NOT respond on http://127.0.0.1:5173/api/report during the run"
+fi
+
+# Always try to shut down the server so the next contract test has a clean port,
+# even if the polling didn't catch it in time.
+curl -sf -o /dev/null "http://127.0.0.1:5173/shutdown" 2>/dev/null || true
+sleep 2
+# Also kill any stray server process on port 5173
+if command -v lsof >/dev/null 2>&1; then
+    lsof -ti:5173 2>/dev/null | xargs -r kill 2>/dev/null || true
 fi
 
 # Check improvement-report-data.json exists

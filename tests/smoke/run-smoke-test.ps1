@@ -214,10 +214,10 @@ Test-Contract "self-improve-run-id-and-server" {
             --allow-all --add-dir $ProjectDir --add-dir $UserProfile 2>&1
     } -ArgumentList $CopilotBin, $script:projectDir, $env:USERPROFILE
 
-    # Poll for report-server on port 5173 while copilot is running
-    $maxRetries = 30
+    # Poll for report-server on port 5173 while copilot is running AND for a
+    # short period after it finishes — the server may be launched near the end.
+    $maxRetries = 40
     for ($i = 0; $i -lt $maxRetries; $i++) {
-        if ($job.State -eq "Completed" -and $i -gt 5) { break }
         Start-Sleep -Seconds 3
         try {
             $response = Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/report" -TimeoutSec 5 -ErrorAction Stop
@@ -227,6 +227,8 @@ Test-Contract "self-improve-run-id-and-server" {
         } catch {
             # server not yet up — keep polling
         }
+        # Stop polling if copilot finished AND we've done at least 15 polls
+        if ($job.State -eq "Completed" -and $i -gt 15) { break }
     }
 
     # Wait for copilot to finish (with a generous timeout)
@@ -259,14 +261,23 @@ Test-Contract "self-improve-run-id-and-server" {
 
     if ($script:serverResponded) {
         Write-Pass "report-server responded on http://127.0.0.1:5173/api/report during the run"
-        # Shutdown the server so the next contract test has a clean port
-        try {
-            Invoke-RestMethod -Uri "http://127.0.0.1:5173/shutdown" -TimeoutSec 5 -ErrorAction SilentlyContinue | Out-Null
-        } catch {}
-        Start-Sleep -Seconds 2
     } else {
         Write-Fail "report-server did NOT respond on http://127.0.0.1:5173/api/report during the run"
     }
+
+    # Always try to shut down the server so the next contract test has a clean port,
+    # even if the polling didn't catch it in time.
+    try {
+        Invoke-RestMethod -Uri "http://127.0.0.1:5173/shutdown" -TimeoutSec 5 -ErrorAction SilentlyContinue | Out-Null
+    } catch {}
+    Start-Sleep -Seconds 2
+    # Also kill any stray server process on port 5173
+    try {
+        $conns = Get-NetTCPConnection -LocalPort 5173 -ErrorAction SilentlyContinue
+        foreach ($conn in $conns) {
+            try { Stop-Process -Id $conn.OwningProcess -Force -ErrorAction SilentlyContinue } catch {}
+        }
+    } catch {}
 }
 
 Test-Contract "self-improve-report-data" {
