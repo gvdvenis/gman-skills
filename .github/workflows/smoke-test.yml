@@ -50,6 +50,7 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN  }}
+          COPILOT_MODEL: gpt-5-mini
         run: |
           pwsh -File tests/smoke/run-smoke-test.ps1
 
@@ -58,6 +59,7 @@ jobs:
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN  }}
+          COPILOT_MODEL: gpt-5-mini
         run: |
           chmod +x tests/smoke/run-smoke-test.sh
           bash tests/smoke/run-smoke-test.sh

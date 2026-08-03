@@ -18,6 +18,7 @@
 # Environment variables (all optional):
 #   COPILOT_BIN     - path to the copilot executable (default: resolved from PATH)
 #   DOTNET_BIN      - path to the dotnet executable (default: resolved from PATH)
+#   COPILOT_MODEL   - model ID to use for copilot -p invocations (default: gpt-5-mini)
 #   KEEP_TEMP       - set to "1" to keep the temp project after the test finishes
 #
 set -uo pipefail
@@ -95,6 +96,7 @@ trap cleanup EXIT
 
 COPILOT_BIN="$(resolve_binary copilot COPILOT_BIN)"
 DOTNET_BIN="$(resolve_binary dotnet DOTNET_BIN)"
+COPILOT_MODEL="${COPILOT_MODEL:-gpt-5-mini}"
 
 echo ""
 echo "==========================================="
@@ -102,6 +104,7 @@ echo " gman-skills headless smoke test"
 echo "==========================================="
 echo " copilot:  $COPILOT_BIN"
 echo " dotnet:   $DOTNET_BIN"
+echo " model:    $COPILOT_MODEL"
 echo " platform: $(uname -s)"
 echo ""
 
@@ -139,7 +142,7 @@ done
 echo ""
 echo "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary"
 
-setup_output="$("$COPILOT_BIN" -p "/setup-gman-skills" --allow-all --add-dir "$HOME" 2>&1 || true)"
+setup_output="$("$COPILOT_BIN" -p "/setup-gman-skills" --model "$COPILOT_MODEL" --allow-all --add-dir "$HOME" 2>&1 || true)"
 echo "$setup_output"
 
 if echo "$setup_output" | grep -qE "dotnet-blazor.*(installed|present|already)"; then
@@ -173,7 +176,7 @@ echo "  Creating temp Blazor project at: $PROJECT_DIR"
 echo "  Starting copilot -p with --self-improve (background)..."
 copilot_log="$(mktemp)"
 "$COPILOT_BIN" -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" \
-    --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" >"$copilot_log" 2>&1 &
+    --model "$COPILOT_MODEL" --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" >"$copilot_log" 2>&1 &
 copilot_pid=$!
 
 # Poll for report-server on port 5173 while copilot is running AND for a short
@@ -256,7 +259,7 @@ if [ -z "$PROJECT_DIR" ]; then
     fail "no self-improve: temp project not created (previous step failed)"
 else
     no_improve_output="$("$COPILOT_BIN" -p "/blazor-architect add a simple greeting component" \
-        --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" 2>&1 || true)"
+        --model "$COPILOT_MODEL" --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" 2>&1 || true)"
     echo "$no_improve_output"
 
     # The spec requires no report data file and no server — we do NOT require a run ID here.

@@ -19,6 +19,7 @@
     Environment variables (all optional):
       COPILOT_BIN     - path to the copilot executable (default: resolved from PATH)
       DOTNET_BIN       - path to the dotnet executable (default: resolved from PATH)
+      COPILOT_MODEL   - model ID to use for copilot -p invocations (default: gpt-5-mini)
       KEEP_TEMP       - set to "1" to keep the temp project after the test finishes
 .EXAMPLE
     pwsh -File tests/smoke/run-smoke-test.ps1
@@ -149,6 +150,8 @@ function Invoke-Cleanup {
 
 $CopilotBin = Resolve-Binary -Name "copilot" -EnvVar "COPILOT_BIN"
 $DotnetBin  = Resolve-Binary -Name "dotnet"  -EnvVar "DOTNET_BIN"
+$CopilotModel = $env:COPILOT_MODEL
+if (-not $CopilotModel) { $CopilotModel = "gpt-5-mini" }
 
 Write-Host ""
 Write-Host "===========================================" -ForegroundColor Cyan
@@ -156,6 +159,7 @@ Write-Host " gman-skills headless smoke test" -ForegroundColor Cyan
 Write-Host "===========================================" -ForegroundColor Cyan
 Write-Host " copilot:  $CopilotBin"
 Write-Host " dotnet:   $DotnetBin"
+Write-Host " model:    $CopilotModel"
 Write-Host " platform: $($PSVersionTable.OS)"
 Write-Host ""
 
@@ -200,7 +204,7 @@ Write-Host ""
 Write-Host "########## CONTRACT 2: /setup-gman-skills bootstrap ##########" -ForegroundColor Yellow
 
 Test-Contract "setup-gman-skills" "Confirm dotnet-blazor plugin + report-server binary present" {
-    $setupOutput = & $CopilotBin -p "/setup-gman-skills" --allow-all --add-dir $env:USERPROFILE 2>&1 | Out-String
+    $setupOutput = & $CopilotBin -p "/setup-gman-skills" --model $CopilotModel --allow-all --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $setupOutput
 
     if ($setupOutput -match "dotnet-blazor.*installed|dotnet-blazor.*present|dotnet-blazor.*already") {
@@ -238,10 +242,10 @@ Test-Contract "self-improve-run-id-and-server" "Verify run ID, report-server on 
     # Start copilot as a background job so we can poll the server concurrently
     Write-Host "  Starting copilot -p with --self-improve (background)..."
     $job = Start-Job -ScriptBlock {
-        param($CopilotBin, $ProjectDir, $UserProfile)
+        param($CopilotBin, $CopilotModel, $ProjectDir, $UserProfile)
         & $CopilotBin -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" `
-            --allow-all --add-dir $ProjectDir --add-dir $UserProfile 2>&1
-    } -ArgumentList $CopilotBin, $script:projectDir, $env:USERPROFILE
+            --model $CopilotModel --allow-all --add-dir $ProjectDir --add-dir $UserProfile 2>&1
+    } -ArgumentList $CopilotBin, $CopilotModel, $script:projectDir, $env:USERPROFILE
 
     # Poll for report-server on port 5173 while copilot is running AND for a
     # short period after it finishes — the server may be launched near the end.
@@ -349,7 +353,7 @@ Test-Contract "no-self-improve-run-id" "Run copilot -p without --self-improve (b
     }
 
     $noImproveOutput = & $CopilotBin -p "/blazor-architect add a simple greeting component" `
-        --allow-all --add-dir $script:projectDir --add-dir $env:USERPROFILE 2>&1 | Out-String
+        --model $CopilotModel --allow-all --add-dir $script:projectDir --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $noImproveOutput
 
     # The spec requires no report data file and no server — we do NOT require a run ID here.
