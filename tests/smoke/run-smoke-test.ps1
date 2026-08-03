@@ -202,9 +202,9 @@ $script:serverResponded = $false
 
 Test-Contract "self-improve-run-id-and-server" {
     # Create a temp Blazor project
-    $projectDir = New-TempDir -Prefix "smoke-blazor"
-    Write-Host "  Creating temp Blazor project at: $projectDir"
-    & $DotnetBin new blazor -o $projectDir --no-restore 2>&1 | Out-Null
+    $script:projectDir = New-TempDir -Prefix "smoke-blazor"
+    Write-Host "  Creating temp Blazor project at: $script:projectDir"
+    & $DotnetBin new blazor -o $script:projectDir --no-restore 2>&1 | Out-Null
 
     # Start copilot as a background job so we can poll the server concurrently
     Write-Host "  Starting copilot -p with --self-improve (background)..."
@@ -212,7 +212,7 @@ Test-Contract "self-improve-run-id-and-server" {
         param($CopilotBin, $ProjectDir, $UserProfile)
         & $CopilotBin -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" `
             --allow-all --add-dir $ProjectDir --add-dir $UserProfile 2>&1
-    } -ArgumentList $CopilotBin, $projectDir, $env:USERPROFILE
+    } -ArgumentList $CopilotBin, $script:projectDir, $env:USERPROFILE
 
     # Poll for report-server on port 5173 while copilot is running
     $maxRetries = 30
@@ -302,13 +302,13 @@ $noImproveRunId = $null
 $noImproveOutput = $null
 
 Test-Contract "no-self-improve-run-id" {
-    if (-not $projectDir) {
+    if (-not $script:projectDir) {
         Write-Fail "no self-improve: temp project not created (previous step failed)"
         return
     }
 
     $noImproveOutput = & $CopilotBin -p "/blazor-architect add a simple greeting component" `
-        --allow-all --add-dir $projectDir --add-dir $env:USERPROFILE 2>&1 | Out-String
+        --allow-all --add-dir $script:projectDir --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $noImproveOutput
 
     # The spec requires no report data file and no server — we do NOT require a run ID here.
@@ -339,10 +339,12 @@ Test-Contract "no-self-improve-no-report" {
             $foundReport = $true
         }
     } else {
-        # No run ID — scan recent run dirs for any new report file
+        # No run ID — scan recent run dirs for any new report file, excluding
+        # the run directory from the --self-improve test (contract 3-5).
         if (Test-Path $runsRoot) {
             $cutoff = (Get-Date).AddMinutes(-5)
             $foundReport = Get-ChildItem $runsRoot -Directory |
+                Where-Object { $_.Name -ne $script:runId } |
                 Where-Object { $_.CreationTime -gt $cutoff } |
                 Where-Object { Test-Path (Join-Path $_.FullName "improvement-report-data.json") } |
                 Select-Object -First 1

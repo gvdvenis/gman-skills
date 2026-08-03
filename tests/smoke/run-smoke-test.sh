@@ -267,11 +267,14 @@ else
             found_report=true
         fi
     else
-        # No run ID — scan recent run dirs for any new report file (created in last 5 min)
+        # No run ID — scan recent run dirs for any new report file (created in last 5 min),
+        # excluding the run directory from the --self-improve test (contract 3-5).
         if [ -d "$runs_root" ]; then
             cutoff_time="$(date -d '5 minutes ago' +%s 2>/dev/null || date -v-5M +%s 2>/dev/null || echo 0)"
             for d in "$runs_root"/*/; do
                 [ -d "$d" ] || continue
+                # Skip the self-improve run directory
+                [ "$(basename "$d")" = "$RUN_ID" ] && continue
                 report_file="$d/improvement-report-data.json"
                 if [ -f "$report_file" ]; then
                     file_time="$(stat -c %Y "$report_file" 2>/dev/null || stat -f %m "$report_file" 2>/dev/null || echo 0)"
