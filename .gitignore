@@ -5,6 +5,9 @@
 # Session / scratch
 .scratch/
 
+# Playwright MCP snapshots (smoke test artifacts)
+.playwright-mcp/
+
 # Eval / workspace
 skills/blazor-architect-workspace/
 

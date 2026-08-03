@@ -29,9 +29,14 @@ param()
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version 3.0
 
-$script:failures = @()
-$script:passes   = 0
-$script:tempDirs = @()
+# Ensure the console can render Unicode (box-drawing chars from npx skills, etc.)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+$script:failures  = @()
+$script:passes    = 0
+$script:testCount = 0
+$script:tempDirs  = @()
 $script:tempFiles = @()
 $script:serverPids = @()
 
@@ -51,8 +56,29 @@ function Write-Fail {
     Write-Host "  [FAIL] $Message" -ForegroundColor Red
 }
 
+function Write-TestHeader {
+    param([string]$Name, [string]$Description)
+    $script:testCount++
+    $label = " TEST $script:testCount : $Name "
+    if ($Description) {
+        $label += "| $Description "
+    }
+    $width = [Math]::Max($label.Length, 72)
+    $line = "=" * $width
+    Write-Host ""
+    Write-Host $line -ForegroundColor Magenta
+    Write-Host $label -ForegroundColor Magenta
+    Write-Host $line -ForegroundColor Magenta
+}
+
+function Write-TestFooter {
+    Write-Host "-" * 72 -ForegroundColor DarkGray
+}
+
 function Test-Contract {
-    param([string]$Name, [scriptblock]$Check)
+    param([string]$Name, [string]$Description, [scriptblock]$Check)
+
+    Write-TestHeader -Name $Name -Description $Description
     try {
         & $Check
         if ($LASTEXITCODE -ne 0 -and -not $?) {
@@ -61,6 +87,7 @@ function Test-Contract {
     } catch {
         Write-Fail "${Name}: $($_.Exception.Message)"
     }
+    Write-TestFooter
 }
 
 function New-TempDir {
@@ -136,9 +163,10 @@ Write-Host ""
 # Contract 1: Install skills and --list shows all three
 # ============================================================================
 
-Write-Host "[1] Install skills and verify --list shows all three" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "########## CONTRACT 1: Install skills and verify --list ##########" -ForegroundColor Yellow
 
-Test-Contract "skills-install" {
+Test-Contract "skills-install" "Install gman-skills via npx skills add" {
     Write-Host "  Running: npx skills add gvdvenis/gman-skills"
     $installOutput = & npx skills add --yes gvdvenis/gman-skills 2>&1 | Out-String
     Write-Host $installOutput
@@ -149,7 +177,7 @@ Test-Contract "skills-install" {
     }
 }
 
-Test-Contract "skills-list" {
+Test-Contract "skills-list" "Verify --list output shows all three skills" {
     $listOutput = & npx skills list 2>&1 | Out-String
     Write-Host "  npx skills list output:"
     Write-Host $listOutput
@@ -169,9 +197,9 @@ Test-Contract "skills-list" {
 # ============================================================================
 
 Write-Host ""
-Write-Host "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary" -ForegroundColor Yellow
+Write-Host "########## CONTRACT 2: /setup-gman-skills bootstrap ##########" -ForegroundColor Yellow
 
-Test-Contract "setup-gman-skills" {
+Test-Contract "setup-gman-skills" "Confirm dotnet-blazor plugin + report-server binary present" {
     $setupOutput = & $CopilotBin -p "/setup-gman-skills" --allow-all --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $setupOutput
 
@@ -193,14 +221,15 @@ Test-Contract "setup-gman-skills" {
 # ============================================================================
 
 Write-Host ""
-Write-Host "[3-5] copilot -p with --self-improve: run ID, report data, server" -ForegroundColor Yellow
+Write-Host "########## CONTRACT 3-5: copilot -p with --self-improve ##########" -ForegroundColor Yellow
+Write-Host " Contracts: 3) run ID match   4) report JSON exists   5) report-server responds" -ForegroundColor DarkGray
 
 $projectDir = $null
 $runId = $null
 $improveOutput = $null
 $script:serverResponded = $false
 
-Test-Contract "self-improve-run-id-and-server" {
+Test-Contract "self-improve-run-id-and-server" "Verify run ID, report-server on port 5173 during --self-improve run" {
     # Create a temp Blazor project
     $script:projectDir = New-TempDir -Prefix "smoke-blazor"
     Write-Host "  Creating temp Blazor project at: $script:projectDir"
@@ -280,7 +309,7 @@ Test-Contract "self-improve-run-id-and-server" {
     } catch {}
 }
 
-Test-Contract "self-improve-report-data" {
+Test-Contract "self-improve-report-data" "Verify improvement-report-data.json exists with schema 1.1" {
     if (-not $script:runId) {
         Write-Fail "improvement-report-data.json: no run ID from previous step"
         return
@@ -307,12 +336,13 @@ Test-Contract "self-improve-report-data" {
 # ============================================================================
 
 Write-Host ""
-Write-Host "[6] copilot -p without --self-improve: no report, no server" -ForegroundColor Yellow
+Write-Host "########## CONTRACT 6: copilot -p WITHOUT --self-improve ##########" -ForegroundColor Yellow
+Write-Host " Contracts: no report JSON, no report-server on port 5173" -ForegroundColor DarkGray
 
 $noImproveRunId = $null
 $noImproveOutput = $null
 
-Test-Contract "no-self-improve-run-id" {
+Test-Contract "no-self-improve-run-id" "Run copilot -p without --self-improve (baseline)" {
     if (-not $script:projectDir) {
         Write-Fail "no self-improve: temp project not created (previous step failed)"
         return
@@ -339,7 +369,7 @@ Test-Contract "no-self-improve-run-id" {
     }
 }
 
-Test-Contract "no-self-improve-no-report" {
+Test-Contract "no-self-improve-no-report" "Verify NO improvement-report-data.json was generated" {
     $runsRoot = Join-Path $env:USERPROFILE ".self-improve-reports\blazor-architect\runs"
     $foundReport = $false
 
@@ -372,7 +402,7 @@ Test-Contract "no-self-improve-no-report" {
     }
 }
 
-Test-Contract "no-self-improve-no-server" {
+Test-Contract "no-self-improve-no-server" "Verify report-server is NOT running on port 5173" {
     Start-Sleep -Seconds 2
     try {
         Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/report" -TimeoutSec 3 -ErrorAction Stop | Out-Null
