@@ -268,7 +268,10 @@ else
     runs_root="$HOME/.self-improve-reports/blazor-architect/runs"
     found_report=false
 
-    if [ -n "$no_improve_run_id" ]; then
+    # If the no-self-improve run has a unique ID, check that specific directory.
+    # If it matches the self-improve run ID (same-minute runs share IDs), fall
+    # through to the scan path which excludes the self-improve run.
+    if [ -n "$no_improve_run_id" ] && [ "$no_improve_run_id" != "$RUN_ID" ]; then
         no_improve_run_dir="$runs_root/$no_improve_run_id"
         no_improve_report="$no_improve_run_dir/improvement-report-data.json"
         if [ -f "$no_improve_report" ]; then

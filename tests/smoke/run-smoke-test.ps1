@@ -343,7 +343,10 @@ Test-Contract "no-self-improve-no-report" {
     $runsRoot = Join-Path $env:USERPROFILE ".self-improve-reports\blazor-architect\runs"
     $foundReport = $false
 
-    if ($script:noImproveRunId) {
+    # If the no-self-improve run has a unique ID, check that specific directory.
+    # If it matches the self-improve run ID (same-minute runs share IDs), fall
+    # through to the scan path which excludes the self-improve run.
+    if ($script:noImproveRunId -and $script:noImproveRunId -ne $script:runId) {
         $runDir = Join-Path $runsRoot $script:noImproveRunId
         $reportFile = Join-Path $runDir "improvement-report-data.json"
         if (Test-Path $reportFile) {
