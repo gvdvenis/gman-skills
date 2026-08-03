@@ -3,12 +3,24 @@ name: Release
 # Builds the report-server binary for Windows and Linux and attaches both
 # as assets to the GitHub release. Triggered when a tag matching v*.*.* is pushed.
 # The smoke-test workflow downloads these assets via setup-gman-skills.
+#
+# To create a release:
+#   git tag v0.2.0
+#   git push origin v0.2.0
+# The workflow builds both binaries and attaches them to a release on that tag.
+#
+# For manual runs (workflow_dispatch), specify a tag name in the inputs.
 
 on:
   push:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to attach release assets to (e.g. v0.2.0)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -36,6 +48,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Publish report-server
+        shell: bash
         run: |
           dotnet publish src/report-server/ReportServer/ReportServer.csproj \
             -c Release \
@@ -52,11 +65,23 @@ jobs:
 
       - name: Zip publish output (Linux)
         if: matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
           cd ./publish/${{ matrix.rid }} && zip -r ../../${{ matrix.asset_name }} . && cd ../..
+
+      - name: Determine tag name
+        id: tag
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.tag }}" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
           files: ${{ matrix.asset_name }}
           fail_on_unmatched_files: true
