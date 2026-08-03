@@ -38,7 +38,7 @@ jobs:
             rid: linux-x64
             asset_name: report-server-linux-x64.zip
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
@@ -47,14 +47,17 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Publish report-server
+      - name: Install native AOT prerequisites (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
+
+      - name: Publish report-server (native AOT)
         shell: bash
         run: |
           dotnet publish src/report-server/ReportServer/ReportServer.csproj \
             -c Release \
             -r ${{ matrix.rid }} \
-            --self-contained true \
-            -p:PublishAot=false \
             -o ./publish/${{ matrix.rid }}
 
       - name: Zip publish output (Windows)
