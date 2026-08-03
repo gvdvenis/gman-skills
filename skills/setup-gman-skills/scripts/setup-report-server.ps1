@@ -53,12 +53,36 @@ $assetPattern = "report-server-win-$arch.zip"
 $asset = $response.assets | Where-Object { $_.name -eq $assetPattern } | Select-Object -First 1
 
 if (-not $asset) {
-    Write-Host "ERROR: No asset matching '$assetPattern' found in latest release."
+    Write-Host "WARNING: No asset matching '$assetPattern' found in latest release."
     Write-Host "Available assets:"
     $response.assets | ForEach-Object { Write-Host "  $($_.name)" }
-    Write-Host "Build the report-server from source:"
-    Write-Host "  cd src\report-server && dotnet publish -c Release -r win-$arch"
-    exit 1
+    Write-Host "Attempting to build from source..."
+    $RepoRoot = (Get-Item $PSScriptRoot).FullName
+    while ($RepoRoot -and -not (Test-Path (Join-Path $RepoRoot "src\report-server\ReportServer\ReportServer.csproj"))) {
+        $Parent = Split-Path $RepoRoot -Parent
+        if ($Parent -eq $RepoRoot) { break }
+        $RepoRoot = $Parent
+    }
+    $SrcDir = Join-Path $RepoRoot "src\report-server\ReportServer"
+    if (Test-Path (Join-Path $SrcDir "ReportServer.csproj") -and (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+        if (-not (Test-Path $InstallDir)) {
+            New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
+        }
+        dotnet publish "$SrcDir\ReportServer.csproj" -c Release -r "win-$arch" --self-contained true -p:PublishAot=false -o "$InstallDir" 2>&1
+        if ($LASTEXITCODE -eq 0 -and (Test-Path $BinaryPath)) {
+            Write-Host "report-server built from source and installed at: $BinaryPath"
+            exit 0
+        }
+        Write-Host "ERROR: Build from source failed (exit code $LASTEXITCODE)."
+        Write-Host "Build the report-server manually:"
+        Write-Host "  cd src\report-server && dotnet publish -c Release -r win-$arch"
+        exit 1
+    } else {
+        Write-Host "ERROR: Cannot build from source (source directory or dotnet not found)."
+        Write-Host "Build the report-server manually:"
+        Write-Host "  cd src\report-server && dotnet publish -c Release -r win-$arch"
+        exit 1
+    }
 }
 
 # --- Download ---------------------------------------------------------------

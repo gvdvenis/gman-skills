@@ -8,7 +8,7 @@
       2. /setup-gman-skills runs and confirms dotnet-blazor + report-server binary present.
       3. copilot -p invocation with --self-improve produces a run ID matching run-YYYYMMDD-HHMM
          in the first output line.
-      4. improvement-report-data.json exists at ~/.blazor-architect/runs/<run_id>/.
+      4. improvement-report-data.json exists at ~/.self-improve-reports/blazor-architect/runs/<run_id>/.
       5. Report-server responds on http://127.0.0.1:5173/api/report during the --self-improve run.
       6. copilot -p invocation without --self-improve produces no improvement-report-data.json
          and no server on port 5173.
@@ -140,7 +140,7 @@ Write-Host "[1] Install skills and verify --list shows all three" -ForegroundCol
 
 Test-Contract "skills-install" {
     Write-Host "  Running: npx skills add gvdvenis/gman-skills"
-    $installOutput = & npx skills add gvdvenis/gman-skills 2>&1 | Out-String
+    $installOutput = & npx skills add --yes gvdvenis/gman-skills 2>&1 | Out-String
     Write-Host $installOutput
     if ($LASTEXITCODE -eq 0) {
         Write-Pass "npx skills add succeeded"
@@ -172,7 +172,7 @@ Write-Host ""
 Write-Host "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary" -ForegroundColor Yellow
 
 Test-Contract "setup-gman-skills" {
-    $setupOutput = & $CopilotBin -p "/setup-gman-skills" --no-ask-user --allow-all-tools 2>&1 | Out-String
+    $setupOutput = & $CopilotBin -p "/setup-gman-skills" --allow-all --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $setupOutput
 
     if ($setupOutput -match "dotnet-blazor.*installed|dotnet-blazor.*present|dotnet-blazor.*already") {
@@ -209,11 +209,10 @@ Test-Contract "self-improve-run-id-and-server" {
     # Start copilot as a background job so we can poll the server concurrently
     Write-Host "  Starting copilot -p with --self-improve (background)..."
     $job = Start-Job -ScriptBlock {
-        param($CopilotBin, $ProjectDir)
+        param($CopilotBin, $ProjectDir, $UserProfile)
         & $CopilotBin -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" `
-            --no-ask-user --allow-all-tools `
-            --add-dir $ProjectDir 2>&1
-    } -ArgumentList $CopilotBin, $projectDir
+            --allow-all --add-dir $ProjectDir --add-dir $UserProfile 2>&1
+    } -ArgumentList $CopilotBin, $projectDir, $env:USERPROFILE
 
     # Poll for report-server on port 5173 while copilot is running
     $maxRetries = 30
@@ -241,7 +240,16 @@ Test-Contract "self-improve-run-id-and-server" {
 
     $firstLine = ($improveOutput -split "`n" | Select-Object -First 1)
 
-    $runIdMatch = [regex]::Match($firstLine, "(run-\d{8}-\d{4})")
+    # Search all output lines for the run ID, not just the first — copilot -p
+    # may print skill headers before the run ID line.
+    $runIdMatch = $null
+    foreach ($line in ($improveOutput -split "`n")) {
+        $m = [regex]::Match($line, "(run-\d{8}-\d{4})")
+        if ($m.Success) {
+            $runIdMatch = $m
+            break
+        }
+    }
     if ($runIdMatch.Success) {
         $script:runId = $runIdMatch.Groups[1].Value
         Write-Pass "run ID '$($script:runId)' found in first output line"
@@ -267,7 +275,7 @@ Test-Contract "self-improve-report-data" {
         return
     }
 
-    $runDir = Join-Path $env:USERPROFILE ".blazor-architect\runs\$($script:runId)"
+    $runDir = Join-Path $env:USERPROFILE ".self-improve-reports\blazor-architect\runs\$($script:runId)"
     $reportFile = Join-Path $runDir "improvement-report-data.json"
 
     if (Test-Path $reportFile) {
@@ -300,22 +308,28 @@ Test-Contract "no-self-improve-run-id" {
     }
 
     $noImproveOutput = & $CopilotBin -p "/blazor-architect add a simple greeting component" `
-        --no-ask-user --allow-all-tools `
-        --add-dir $projectDir 2>&1 | Out-String
+        --allow-all --add-dir $projectDir --add-dir $env:USERPROFILE 2>&1 | Out-String
     Write-Host $noImproveOutput
 
     # The spec requires no report data file and no server — we do NOT require a run ID here.
     # If a run ID is present we use it to check the run directory; if not, we check all runs
     # created in the last 2 minutes for a stray report file.
     $firstLine = ($noImproveOutput -split "`n" | Select-Object -First 1)
-    $runIdMatch = [regex]::Match($firstLine, "(run-\d{8}-\d{4})")
+    $runIdMatch = $null
+    foreach ($line in ($noImproveOutput -split "`n")) {
+        $m = [regex]::Match($line, "(run-\d{8}-\d{4})")
+        if ($m.Success) {
+            $runIdMatch = $m
+            break
+        }
+    }
     if ($runIdMatch.Success) {
         $script:noImproveRunId = $runIdMatch.Groups[1].Value
     }
 }
 
 Test-Contract "no-self-improve-no-report" {
-    $runsRoot = Join-Path $env:USERPROFILE ".blazor-architect\runs"
+    $runsRoot = Join-Path $env:USERPROFILE ".self-improve-reports\blazor-architect\runs"
     $foundReport = $false
 
     if ($script:noImproveRunId) {

@@ -7,7 +7,7 @@
 #   2. /setup-gman-skills runs and confirms dotnet-blazor + report-server binary present.
 #   3. copilot -p invocation with --self-improve produces a run ID matching run-YYYYMMDD-HHMM
 #      in the first output line.
-#   4. improvement-report-data.json exists at ~/.blazor-architect/runs/<run_id>/.
+#   4. improvement-report-data.json exists at ~/.self-improve-reports/blazor-architect/runs/<run_id>/.
 #   5. Report-server responds on http://127.0.0.1:5173/api/report during the --self-improve run.
 #   6. copilot -p invocation without --self-improve produces no improvement-report-data.json
 #      and no server on port 5173.
@@ -112,7 +112,7 @@ echo ""
 echo "[1] Install skills and verify --list shows all three"
 
 echo "  Running: npx skills add gvdvenis/gman-skills"
-install_output="$(npx skills add gvdvenis/gman-skills 2>&1)"
+install_output="$(npx skills add --yes gvdvenis/gman-skills 2>&1)"
 install_rc=$?
 echo "$install_output"
 if [ "$install_rc" -eq 0 ]; then
@@ -139,7 +139,7 @@ done
 echo ""
 echo "[2] /setup-gman-skills confirms dotnet-blazor + report-server binary"
 
-setup_output="$("$COPILOT_BIN" -p "/setup-gman-skills" --no-ask-user --allow-all-tools 2>&1 || true)"
+setup_output="$("$COPILOT_BIN" -p "/setup-gman-skills" --allow-all --add-dir "$HOME" 2>&1 || true)"
 echo "$setup_output"
 
 if echo "$setup_output" | grep -qE "dotnet-blazor.*(installed|present|already)"; then
@@ -173,8 +173,7 @@ echo "  Creating temp Blazor project at: $PROJECT_DIR"
 echo "  Starting copilot -p with --self-improve (background)..."
 copilot_log="$(mktemp)"
 "$COPILOT_BIN" -p "/blazor-architect implement a simple counter component in Components/Pages/Counter.razor --self-improve" \
-    --no-ask-user --allow-all-tools \
-    --add-dir "$PROJECT_DIR" >"$copilot_log" 2>&1 &
+    --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" >"$copilot_log" 2>&1 &
 copilot_pid=$!
 
 # Poll for report-server on port 5173 while copilot is running
@@ -200,10 +199,9 @@ wait "$copilot_pid" 2>/dev/null || true
 improve_output="$(cat "$copilot_log")"
 echo "$improve_output"
 
-# Extract run ID from first line of output
-first_line="$(echo "$improve_output" | head -1)"
-
-run_id_match="$(echo "$first_line" | grep -oE "run-[0-9]{8}-[0-9]{4}" | head -1 || true)"
+# Extract run ID from output (search all lines, not just the first — copilot -p
+# may print skill headers before the run ID line)
+run_id_match="$(echo "$improve_output" | grep -oE "run-[0-9]{8}-[0-9]{4}" | head -1 || true)"
 if [ -n "$run_id_match" ]; then
     RUN_ID="$run_id_match"
     pass "run ID '$RUN_ID' found in first output line"
@@ -222,7 +220,7 @@ fi
 
 # Check improvement-report-data.json exists
 if [ -n "$RUN_ID" ]; then
-    run_dir="$HOME/.blazor-architect/runs/$RUN_ID"
+    run_dir="$HOME/.self-improve-reports/blazor-architect/runs/$RUN_ID"
     report_file="$run_dir/improvement-report-data.json"
 
     if [ -f "$report_file" ]; then
@@ -250,17 +248,16 @@ if [ -z "$PROJECT_DIR" ]; then
     fail "no self-improve: temp project not created (previous step failed)"
 else
     no_improve_output="$("$COPILOT_BIN" -p "/blazor-architect add a simple greeting component" \
-        --no-ask-user --allow-all-tools \
-        --add-dir "$PROJECT_DIR" 2>&1 || true)"
+        --allow-all --add-dir "$PROJECT_DIR" --add-dir "$HOME" 2>&1 || true)"
     echo "$no_improve_output"
 
     # The spec requires no report data file and no server — we do NOT require a run ID here.
     # If a run ID is present we use it to check the run directory; if not, we scan recent runs.
     first_line="$(echo "$no_improve_output" | head -1)"
-    no_improve_run_id="$(echo "$first_line" | grep -oE "run-[0-9]{8}-[0-9]{4}" | head -1 || true)"
+    no_improve_run_id="$(echo "$no_improve_output" | grep -oE "run-[0-9]{8}-[0-9]{4}" | head -1 || true)"
 
     # Check no improvement-report-data.json
-    runs_root="$HOME/.blazor-architect/runs"
+    runs_root="$HOME/.self-improve-reports/blazor-architect/runs"
     found_report=false
 
     if [ -n "$no_improve_run_id" ]; then

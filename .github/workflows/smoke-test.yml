@@ -13,6 +13,7 @@ on:
       - 'src/report-server/**'
       - 'tests/smoke/**'
       - '.github/workflows/smoke-test.yml'
+      - '.github/workflows/release.yml'
   pull_request:
     branches: [main]
     paths:
@@ -20,6 +21,7 @@ on:
       - 'src/report-server/**'
       - 'tests/smoke/**'
       - '.github/workflows/smoke-test.yml'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 jobs:
@@ -29,14 +31,14 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -47,6 +49,16 @@ jobs:
         run: |
           npm install -g @github/copilot
           copilot --version
+
+      - name: Verify auth secret
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::COPILOT_GITHUB_TOKEN secret is not set. Create a fine-grained PAT with Copilot read access and add it as a repository secret."
+            exit 1
+          fi
 
       - name: Run smoke test (Windows)
         if: matrix.os == 'windows-latest'

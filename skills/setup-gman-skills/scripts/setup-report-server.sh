@@ -56,10 +56,31 @@ asset_pattern="report-server-${os}-${arch}.zip"
 download_url=$(echo "$api_response" | grep -o '"browser_download_url": *"[^"]*"' | grep "$asset_pattern" | head -1 | sed 's/.*"browser_download_url": *"//;s/"//')
 
 if [ -z "$download_url" ]; then
-    echo "ERROR: No asset matching '$asset_pattern' found in latest release."
-    echo "Build the report-server from source:"
-    echo "  cd src/report-server && dotnet publish -c Release -r ${os}-${arch}"
-    exit 1
+    echo "WARNING: No asset matching '$asset_pattern' found in latest release."
+    echo "Attempting to build from source..."
+    REPO_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
+    SRC_DIR="$REPO_ROOT/src/report-server/ReportServer"
+    if [ -d "$SRC_DIR" ] && command -v dotnet >/dev/null 2>&1; then
+        mkdir -p "$INSTALL_DIR"
+        dotnet publish "$SRC_DIR/ReportServer.csproj" \
+            -c Release -r "${os}-${arch}" --self-contained true \
+            -p:PublishAot=false \
+            -o "$INSTALL_DIR" 2>&1 || {
+            echo "ERROR: Build from source failed."
+            echo "Build the report-server manually:"
+            echo "  cd src/report-server && dotnet publish -c Release -r ${os}-${arch}"
+            exit 1
+        }
+        chmod +x "$BINARY_PATH" 2>/dev/null || true
+        echo "report-server built from source and installed at: $BINARY_PATH"
+        exit 0
+    else
+        echo "ERROR: Cannot build from source (source directory or dotnet not found)."
+        echo "Build the report-server manually:"
+        echo "  cd src/report-server && dotnet publish -c Release -r ${os}-${arch}"
+        echo "Then copy the binary to $INSTALL_DIR/"
+        exit 1
+    fi
 fi
 
 # --- Download ---------------------------------------------------------------

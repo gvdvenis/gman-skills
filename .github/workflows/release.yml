@@ -1,0 +1,62 @@
+name: Release
+
+# Builds the report-server binary for Windows and Linux and attaches both
+# as assets to the GitHub release. Triggered when a tag matching v*.*.* is pushed.
+# The smoke-test workflow downloads these assets via setup-gman-skills.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            asset_name: report-server-win-x64.zip
+          - os: ubuntu-latest
+            rid: linux-x64
+            asset_name: report-server-linux-x64.zip
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish report-server
+        run: |
+          dotnet publish src/report-server/ReportServer/ReportServer.csproj \
+            -c Release \
+            -r ${{ matrix.rid }} \
+            --self-contained true \
+            -p:PublishAot=false \
+            -o ./publish/${{ matrix.rid }}
+
+      - name: Zip publish output (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path ./publish/${{ matrix.rid }}/* -DestinationPath ${{ matrix.asset_name }}
+
+      - name: Zip publish output (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd ./publish/${{ matrix.rid }} && zip -r ../../${{ matrix.asset_name }} . && cd ../..
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset_name }}
+          fail_on_unmatched_files: true
