@@ -6,22 +6,6 @@ name: Smoke test
 # .scratch/gman-skills-reorg/issues/10-headless-smoke-test.md
 
 on:
-  push:
-    branches: [main, develop]
-    paths:
-      - 'skills/**'
-      - 'src/report-server/**'
-      - 'tests/smoke/**'
-      - '.github/workflows/smoke-test.yml'
-      - '.github/workflows/release.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'skills/**'
-      - 'src/report-server/**'
-      - 'tests/smoke/**'
-      - '.github/workflows/smoke-test.yml'
-      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 jobs:
