@@ -8,6 +8,7 @@ source of truth for skill content is the root-level `skills/` directory:
 - `skills/blazor-architect/` - orchestration skill (user-invokable).
 - `skills/self-improve/` - self-improvement report skill (loaded by blazor-architect, not user-invokable).
 - `skills/setup-gman-skills/` - first-time dependency + binary bootstrap skill (user-invokable).
+- `skills/implement-spec-tickets/` - implements every ticket of one spec with parallel worktree agents (user-invokable).
 - `src/report-server/` - C# report-server source, built and published to GitHub Releases.
   The binary is never committed; it is downloaded by `setup-gman-skills` to `~/.copilot/gman-skills/bin/`.
 - `docs/` - package contracts, agent guidance, and specs.

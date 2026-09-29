@@ -43,6 +43,7 @@ without blocking.
 | `blazor-architect` | Route a full Blazor work request across the appropriate specialist lane(s). Triggers on full-request, multi-concern phrasing ("implement this feature", "review and refactor this page"). Delegates to dotnet-blazor plugin skills as specialist resources. | Yes |
 | `self-improve` | Loaded by `blazor-architect` when `--self-improve` is active. Handles improvement report generation (algorithm, dedup, ranking), report-server auto-launch on port 5173, and CLI staging readiness. | No |
 | `setup-gman-skills` | First-time setup: installs the dotnet-blazor plugin dependency and downloads the report-server binary from GitHub Releases. Run once after `npx skills add`. | Yes |
+| `implement-spec-tickets` | Implement every ticket of one spec: discovers its dependency graph, dispatches parallel worktree agents, and coordinates merge and closure. Invoke as `/implement-spec-tickets <SPEC-TICKET-ID>`. | Yes |
 
 ## Dev workflow
 
