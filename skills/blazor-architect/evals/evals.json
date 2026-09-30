@@ -1,0 +1,86 @@
+{
+  "skill_name": "blazor-architect",
+  "evals": [
+    {
+      "id": 1,
+      "name": "inline-component-authoring-invokes-author-component",
+      "prompt": "Create a new Blazor component called ProductCard.razor in Components/ that displays a product name, price, and an 'Add to cart' button with a parameter for the product model. It's a single component, nothing complex.",
+      "expected_output": "A ProductCard.razor component with proper [Parameter] attributes. The skill should have routed inline (single lane, ≤ 2 files) and invoked the 'author-component' guidance skill before writing code.",
+      "files": [],
+      "expectations": [
+        "The run announces a route of 'inline' in the routing summary",
+        "The skill 'author-component' was invoked (visible in the transcript as a skill invocation or explicit reference to loading it)",
+        "The output component file uses [Parameter] attributes correctly",
+        "The component includes an EventCallback for the add-to-cart action (guidance from author-component)"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "form-task-invokes-collect-user-input",
+      "prompt": "Add a login form to Pages/Login.razor with email and password fields, validation using data annotations, and a submit handler. The form should show validation errors inline.",
+      "expected_output": "A login form using EditForm with DataAnnotationsValidator, proper @bind usage, and validation summary. The skill should have invoked 'collect-user-input' for form patterns before writing the form code.",
+      "files": [],
+      "expectations": [
+        "The skill 'collect-user-input' was invoked before form code was written",
+        "The output uses EditForm (not a raw form element)",
+        "The output includes DataAnnotationsValidator or equivalent validation component",
+        "Validation errors are displayed inline or via ValidationSummary"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "data-fetching-task-invokes-fetch-and-send-data",
+      "prompt": "I need to fetch a list of products from an API endpoint /api/products and display them in my Products.razor page with loading, error, and empty states. Register the HttpClient in the service layer too.",
+      "expected_output": "The skill routes to data-fetching-specialist (delegated) and the specialist invokes 'fetch-and-send-data' for guidance. Output includes a service abstraction, HttpClient registration, and loading/error/empty state handling in the page.",
+      "files": [],
+      "expectations": [
+        "The skill 'fetch-and-send-data' was invoked (either inline or referenced in the delegated task prompt)",
+        "The route is 'delegate' (multi-file: service + page)",
+        "The output includes loading state handling",
+        "The output includes error state handling",
+        "The output includes empty state handling",
+        "HttpClient is registered via DI (not new'd up inline)"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "fluent-ui-overlay-invokes-fluentui-blazor",
+      "prompt": "Build a Fluent UI data grid in Pages/Orders.razor that shows order data with sorting and pagination. Use Microsoft FluentUI components throughout.",
+      "expected_output": "The skill should invoke 'fluentui-blazor' as an overlay alongside the active lane. The output uses FluentDataGrid and related Fluent components with correct provider setup.",
+      "files": [],
+      "expectations": [
+        "The skill 'fluentui-blazor' was invoked as an overlay",
+        "The output uses FluentDataGrid (not MudBlazor or standard HTML table)",
+        "Fluent UI provider/setup is present or referenced",
+        "Sorting capability is included in the grid implementation"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "multi-lane-feature-invokes-multiple-skills",
+      "prompt": "Implement a product catalog feature: create a ProductGrid component that fetches products from /api/products and has a search filter form at the top. Put it all in Pages/Catalog.razor.",
+      "expected_output": "The skill routes to delegate (multi-lane: component-author + form-specialist + data-fetching-specialist). Each specialist invokes its corresponding guidance skill. The output combines a component, a form, and data fetching.",
+      "files": [],
+      "expectations": [
+        "The route is 'delegate' (multi-lane feature)",
+        "At least two guidance skills were invoked (author-component + collect-user-input and/or fetch-and-send-data)",
+        "The output includes a reusable component (ProductGrid)",
+        "The output includes a search filter form",
+        "The output fetches data from /api/products"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "extraction-task-invokes-component-architect",
+      "prompt": "My Checkout.razor page is 600 lines and getting unwieldy. Extract the order summary section and the payment method selector into separate reusable components.",
+      "expected_output": "The skill routes to delegate (extraction) and uses 'blazor-component-architect' as the guidance skill. Output includes extracted components and updated Checkout.razor.",
+      "files": [],
+      "expectations": [
+        "The route is 'delegate' (extraction always delegates)",
+        "The skill 'blazor-component-architect' was invoked or referenced for extraction guidance",
+        "The output includes at least two extracted component files",
+        "The original Checkout.razor is updated to use the extracted components"
+      ]
+    }
+  ]
+}

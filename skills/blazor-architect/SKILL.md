@@ -65,8 +65,12 @@ Route: delegate (component-author → data-fetching-specialist, serial)
 ### Inline execution
 
 For narrow tasks (single lane, ≤ 2 files, no broad repo discovery), do the work directly in this
-context. Use the dotnet-blazor plugin skills as guidance — read the relevant skill's SKILL.md for
-patterns and constraints before writing code.
+context. **Before writing any Blazor code**, invoke the plugin skill that matches the active lane
+(see the specialist lane table below). These skills contain patterns, parameter rules, lifecycle
+guidance, and anti-pattern checks that the model would otherwise have to reinvent — invoking them
+is the difference between code that follows Blazor conventions and code that looks right but
+breaks at runtime. The skill invocation loads focused, lane-specific guidance directly into
+context, so the cost is low and the accuracy gain is high.
 
 ### Delegated execution
 
@@ -75,10 +79,29 @@ one lane. Specialist lanes:
 
 | Lane | Scope | Guidance skill | Delegate? |
 |---|---|---|---|
-| component-author | Create a new component, parameters, lifecycle, CSS isolation | `dotnet-blazor:author-component` | Inline if ≤ 2 files |
-| component-extractor | Extract sections from a page into reusable components | — | Always delegate |
-| form-specialist | Forms, binding, validation, EditForm, @bind | `dotnet-blazor:collect-user-input` | Inline if 1–2 files |
-| data-fetching-specialist | HttpClient, service abstractions, loading/error/empty states | `dotnet-blazor:fetch-and-send-data` | Always delegate |
+| component-author | Create a new component, parameters, lifecycle, CSS isolation | `author-component` | Inline if ≤ 2 files |
+| component-extractor | Extract sections from a page into reusable components | `blazor-component-architect` | Always delegate |
+| form-specialist | Forms, binding, validation, EditForm, @bind | `collect-user-input` | Inline if 1–2 files |
+| data-fetching-specialist | HttpClient, service abstractions, loading/error/empty states | `fetch-and-send-data` | Always delegate |
+
+#### How to invoke the guidance skills
+
+When the active lane matches a guidance skill in the table above, invoke it by name before writing
+or delegating code. For inline execution, invoke the skill in this context. For delegated
+execution, include the skill name in the specialist's task prompt so the sub-agent invokes it in
+its own context.
+
+The guidance skills come from the `dotnet-blazor` plugin and are listed in `available_skills`
+under names like `author-component`, `collect-user-input`, `fetch-and-send-data`. The
+`blazor-component-architect` skill (user-level) covers extraction/refactoring work. The
+`fluentui-blazor` skill (user-level) covers Fluent UI component usage. Invoke them the same way —
+by name.
+
+Why this matters: each guidance skill encodes hard-won knowledge about Blazor lifecycle ordering,
+parameter constraints, render-mode boundaries, and common pitfalls. Skipping the invocation
+means relying on the model's general Blazor knowledge, which is less accurate and less
+up-to-date than the curated skill content. The skills also call out what *not* to do, which is
+often more valuable than what to do.
 
 Each specialist must return a structured report matching `references/feedback-report-template.json`.
 On first validation failure, request one schema-repair retry; on second failure, mark the lane
@@ -87,7 +110,10 @@ On first validation failure, request one schema-repair retry; on second failure,
 ### Fluent UI
 
 Fluent UI is a cross-lane constraint, not a lane. When Fluent components are in scope, invoke the
-`fluentui-blazor` skill as an overlay alongside the active specialist.
+`fluentui-blazor` skill as an overlay alongside the active specialist. Invoke it the same way as
+the lane guidance skills — by name, before writing Fluent component markup. The skill covers
+provider setup, component-specific properties, JS interop pitfalls, and theming — all of which
+are easy to get wrong from memory.
 
 **Done when:** all specialist work is complete and reports are validated. Every specialist report
 conforms to the feedback-report schema.
