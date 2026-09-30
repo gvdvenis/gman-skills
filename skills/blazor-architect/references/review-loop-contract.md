@@ -1,7 +1,6 @@
 # Review-loop contract
 
-_Decision record for ticket-06. This document is the authoritative reference for how the
-orchestrator runs code review, when it stops, and what it emits._
+How the orchestrator runs code review, when it stops, and what it emits.
 
 ## Review sub-agent pattern
 

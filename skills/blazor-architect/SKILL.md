@@ -74,7 +74,8 @@ context, so the cost is low and the accuracy gain is high.
 
 ### Delegated execution
 
-For broader tasks, dispatch via the `task` tool. Each specialist lane receives a bounded task for
+For broader tasks, dispatch sub-agents (the `task` tool in Copilot CLI, the `Agent` tool in
+Claude Code). Each specialist lane receives a bounded task for
 one lane. Specialist lanes:
 
 | Lane | Scope | Guidance skill | Delegate? |
@@ -91,8 +92,9 @@ or delegating code. For inline execution, invoke the skill in this context. For 
 execution, include the skill name in the specialist's task prompt so the sub-agent invokes it in
 its own context.
 
-The guidance skills come from the `dotnet-blazor` plugin and are listed in `available_skills`
-under names like `author-component`, `collect-user-input`, `fetch-and-send-data`. The
+The guidance skills come from the `dotnet-blazor` plugin. Copilot CLI lists them as
+`author-component`, `collect-user-input`, `fetch-and-send-data`; Claude Code lists them with the
+plugin prefix, e.g. `dotnet-blazor:author-component`. The
 `blazor-component-architect` skill (user-level) covers extraction/refactoring work. The
 `fluentui-blazor` skill (user-level) covers Fluent UI component usage. Invoke them the same way —
 by name.
@@ -102,6 +104,13 @@ parameter constraints, render-mode boundaries, and common pitfalls. Skipping the
 means relying on the model's general Blazor knowledge, which is less accurate and less
 up-to-date than the curated skill content. The skills also call out what *not* to do, which is
 often more valuable than what to do.
+
+If a guidance skill is not in the list of available skills, do not guess its content: continue
+without it, and end the final output with this line for each missing `dotnet-blazor` skill:
+
+```
+[blazor-architect] Guidance skill <name> not available. Run /setup-gman-skills to install the dotnet-blazor plugin.
+```
 
 Each specialist must return a structured report matching `references/feedback-report-template.json`.
 On first validation failure, request one schema-repair retry; on second failure, mark the lane
@@ -126,8 +135,8 @@ before dispatching any review sub-agent.
 **When `skip_code_review` is true:** do not spawn a review sub-agent. Set `review_outcome` to
 `"skipped"`. Proceed to step 6.
 
-**When `skip_code_review` is false:** run the review loop — a dedicated review sub-agent via the
-`task` tool with `agent_type: "code-review"`. The review loop:
+**When `skip_code_review` is false:** run the review loop — a dedicated review sub-agent that runs
+the `code-review` skill. The review loop:
 
 - Maximum 3 passes (initial + 2 fix-and-review cycles).
 - Stop early when a pass returns zero actionable findings.
@@ -172,7 +181,7 @@ Close every run with a summary block. This is the user's primary feedback — ma
   lanes:     component-author
   status:    success
   review:    passed
-  files:     src/Konqvist.Web/Components/Pages/Counter.razor (created)
+  files:     Components/Pages/Counter.razor (created)
   artifacts: ~/.self-improve-reports/blazor-architect/runs/run-20260802-1716/analysis.json
   follow-up: none
 ```

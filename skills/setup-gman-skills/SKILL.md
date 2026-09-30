@@ -14,11 +14,15 @@ First-time setup for the gman-skills package. Run once after `npx skills add gvd
 
 ## Step 1 — Check and install the dotnet-blazor plugin
 
-Run `copilot plugin list` and look for `dotnet-blazor` in the output.
+Use the CLI of the agent running this skill: `copilot` in Copilot CLI, `claude` in Claude Code.
+Run `<cli> plugin list` and look for `dotnet-blazor` in the output.
 
 If **missing**, install it in two steps:
-1. `copilot plugin marketplace add dotnet/skills`
-2. `copilot plugin install dotnet-blazor@dotnet-agent-skills`
+1. `<cli> plugin marketplace add dotnet/skills`
+2. `<cli> plugin install dotnet-blazor@dotnet-agent-skills`
+
+In Claude Code the plugin's skills load in the next session, not the current one; say so in the
+summary.
 
 If **present**, skip — it is already installed.
 
