@@ -1,16 +1,33 @@
 # gman-skills
 
-Personal Copilot CLI skills for Blazor orchestration and self-improvement.
+Personal Claude Code and Copilot CLI skills for Blazor orchestration, spec-ticket implementation
+and plain-language writing.
 
 `gman-skills` packages a thin Blazor-focused orchestration layer, an opt-in self-improvement
 report generator, and a first-time setup skill. It is distributed as a public GitHub repo
-installable with `npx skills`.
+that is its own plugin marketplace.
 
 ## Install
 
+Claude Code:
+
 ```sh
-npx skills add gvdvenis/gman-skills
+claude plugin marketplace add gvdvenis/gman-skills
+claude plugin install gman-skills@gman-skills
 ```
+
+Copilot CLI:
+
+```sh
+copilot plugin marketplace add gvdvenis/gman-skills
+copilot plugin install gman-skills@gman-skills
+```
+
+The plugin includes a session-start hook that loads the `use-plain-language` rules in every
+session. In Claude Code the skills are prefixed with the plugin name, e.g.
+`/gman-skills:setup-gman-skills`.
+
+Other agents: `npx skills add gvdvenis/gman-skills` installs the skills without the hook.
 
 ## First-time setup
 
@@ -20,7 +37,7 @@ After installing, run the setup skill once to bootstrap external dependencies:
 /setup-gman-skills
 ```
 
-Setup does three things:
+Setup does two things:
 
 1. **dotnet-blazor plugin** - checks whether the `dotnet-blazor` Copilot CLI plugin is installed
    (via `copilot plugin list`). If missing, it adds the `dotnet/skills` marketplace and installs
@@ -32,9 +49,6 @@ Setup does three things:
    `gvdvenis/gman-skills`, downloads the platform-appropriate `report-server-{os}-{arch}.zip`,
    and extracts it to `~/.copilot/gman-skills/bin/`. The binary is the local C# server that
    `self-improve` auto-launches to serve the improvement report UI.
-3. **plain-language hook** - asks whether to add a session-start hook (Claude Code:
-   `~/.claude/settings.json`; Copilot CLI: `~/.copilot/hooks/use-plain-language.json`) that loads
-   the `use-plain-language` rules at the start of every session.
 
 Idempotent preflight scripts (`check-deps.ps1` / `check-deps.sh`) warn on missing components
 without blocking.
@@ -47,7 +61,7 @@ without blocking.
 | `self-improve` | Loaded by `blazor-architect` when `--self-improve` is active. Handles improvement report generation (algorithm, dedup, ranking), report-server auto-launch on port 5173, and CLI staging readiness. | No |
 | `setup-gman-skills` | First-time setup: installs the dotnet-blazor plugin dependency and downloads the report-server binary from GitHub Releases. Run once after `npx skills add`. | Yes |
 | `implement-spec-tickets` | Implement every ticket of one spec: discovers its dependency graph, dispatches parallel worktree agents, and coordinates merge and closure. Invoke as `/implement-spec-tickets <SPEC-TICKET-ID>`. | Yes |
-| `use-plain-language` | Plain-language rules for everything written to the user, with extra rules for question rounds, proposed names and hand-backs. `setup-gman-skills` offers a session-start hook that loads it in every session (Claude Code and Copilot CLI). | Yes (user-invoked only) |
+| `use-plain-language` | Plain-language rules for everything written to the user, with extra rules for question rounds, proposed names and hand-backs. The plugin's session-start hook loads it in every session (Claude Code and Copilot CLI). | Yes (user-invoked only) |
 
 ## Dev workflow
 

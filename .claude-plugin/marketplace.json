@@ -1,0 +1,7 @@
+{
+  "name": "gman-skills",
+  "owner": { "name": "Gert van de Venis", "url": "https://github.com/gvdvenis" },
+  "plugins": [
+    { "name": "gman-skills", "source": "./", "description": "Blazor orchestration, spec-ticket implementation, and plain-language rules." }
+  ]
+}

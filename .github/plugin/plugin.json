@@ -1,0 +1,8 @@
+{
+  "name": "gman-skills",
+  "description": "Blazor orchestration, spec-ticket implementation, and plain-language rules loaded at every session start.",
+  "author": { "name": "Gert van de Venis", "url": "https://github.com/gvdvenis" },
+  "repository": "https://github.com/gvdvenis/gman-skills",
+  "skills": "skills/",
+  "hooks": "hooks/copilot-hooks.json"
+}

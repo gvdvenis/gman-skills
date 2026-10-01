@@ -1,0 +1,11 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "sh \"${CLAUDE_PLUGIN_ROOT}/skills/use-plain-language/scripts/session-start.sh\" claude", "timeout": 10 }
+        ]
+      }
+    ]
+  }
+}

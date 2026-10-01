@@ -1,0 +1,14 @@
+{
+  "name": "gman-skills",
+  "description": "Blazor orchestration, spec-ticket implementation, and plain-language rules.",
+  "owner": { "name": "Gert van de Venis", "url": "https://github.com/gvdvenis" },
+  "plugins": [
+    {
+      "name": "gman-skills",
+      "description": "Blazor orchestration, spec-ticket implementation, and plain-language rules loaded at every session start.",
+      "source": "./",
+      "skills": "skills/",
+      "hooks": "hooks/copilot-hooks.json"
+    }
+  ]
+}

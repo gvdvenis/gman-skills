@@ -3,7 +3,7 @@ name: setup-gman-skills
 description: >
   First-time setup for the gman-skills package. Checks whether the dotnet-blazor plugin is installed
   and installs it when missing. Checks whether the report-server binary exists and downloads it
-  from GitHub Releases when missing. Offers to add the plain-language session-start hook. Run once after `npx skills add gvdvenis/gman-skills`.
+  from GitHub Releases when missing. Run once after `npx skills add gvdvenis/gman-skills`.
   Triggers on: "setup gman skills", "/setup-gman-skills", "install gman skills dependencies".
 user-invocable: true
 ---
@@ -51,42 +51,7 @@ Record the result: `downloaded` (was just downloaded), `present` (was already th
 **Done when:** the binary exists at `~/.copilot/gman-skills/bin/` or the download failed and the
 error is recorded.
 
-## Step 3 — Offer the plain-language hook
-
-The `use-plain-language` skill holds rules for clear writing and readable question rounds. A
-session-start hook hands those rules to the agent at the start of every session, so they apply
-without anyone invoking the skill.
-
-Check first: if the hook config below already mentions `use-plain-language`, record `present`
-and skip. Otherwise ask the user once: "Add the plain-language hook, so every session starts
-with the clear-writing rules? (y/n)". On no, record `declined`.
-
-On yes, resolve the absolute path of `../use-plain-language/scripts/` from this skill's folder,
-then add the hook for the agent running this skill. Merge into existing config; keep every
-hook already there.
-
-- **Claude Code**: add a `SessionStart` entry without a matcher (so it also runs after `/clear`
-  and compaction) to `~/.claude/settings.json`:
-  ```json
-  { "hooks": { "SessionStart": [ { "hooks": [ { "type": "command",
-    "command": "<run-command> claude" } ] } ] } }
-  ```
-  `<run-command>` on Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File "<scripts>/session-start.ps1"`;
-  on Linux / macOS: `sh "<scripts>/session-start.sh"`.
-- **Copilot CLI**: write `~/.copilot/hooks/use-plain-language.json`:
-  ```json
-  { "version": 1, "hooks": { "sessionStart": [ { "type": "command",
-    "bash": "sh \"<scripts>/session-start.sh\" copilot",
-    "powershell": "powershell -NoProfile -ExecutionPolicy Bypass -File \"<scripts>/session-start.ps1\" copilot",
-    "timeoutSec": 10 } ] } }
-  ```
-
-Run the same command once by hand and check it prints the rules. Record `added` or `failed`.
-
-**Done when:** the hook is `added`, `present` or `declined`, or it `failed` and the error is
-recorded.
-
-## Step 4 — Print the summary
+## Step 3 — Print the summary
 
 Print a summary table so the user can see what happened. This is mandatory — the user needs
 confirmation that setup worked:
@@ -98,7 +63,6 @@ confirmation that setup worked:
   ───────────────────────────────
   dotnet-blazor plugin  installed
   report-server binary  downloaded
-  plain-language hook   added
 ```
 
 If any component failed, print the failure reason and a suggested fix:
