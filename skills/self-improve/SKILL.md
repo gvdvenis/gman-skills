@@ -1,8 +1,8 @@
 ---
 name: self-improve
-user-invokable: false
+user-invocable: false
 description: >
-  Loaded by blazor-architect when --self-improve is active. Not user-invokable — appears in the
+  Loaded by blazor-architect when --self-improve is active. Not user-invocable — appears in the
     skills list but can only be loaded by blazor-architect, not called directly. Handles improvement
     report generation, C# server auto-launch, and CLI staging.
 ---

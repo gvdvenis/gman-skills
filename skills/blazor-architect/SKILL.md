@@ -1,6 +1,6 @@
 ---
 name: blazor-architect
-user-invokable: true
+user-invocable: true
 description: >
   Route a full Blazor work request across the appropriate specialist lane(s). Use when the request
   spans more than one concern (authoring, data, auth, review) or when lane selection itself is

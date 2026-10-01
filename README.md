@@ -20,7 +20,7 @@ After installing, run the setup skill once to bootstrap external dependencies:
 /setup-gman-skills
 ```
 
-Setup does two things:
+Setup does three things:
 
 1. **dotnet-blazor plugin** - checks whether the `dotnet-blazor` Copilot CLI plugin is installed
    (via `copilot plugin list`). If missing, it adds the `dotnet/skills` marketplace and installs
@@ -32,18 +32,22 @@ Setup does two things:
    `gvdvenis/gman-skills`, downloads the platform-appropriate `report-server-{os}-{arch}.zip`,
    and extracts it to `~/.copilot/gman-skills/bin/`. The binary is the local C# server that
    `self-improve` auto-launches to serve the improvement report UI.
+3. **plain-language hook** - asks whether to add a session-start hook (Claude Code:
+   `~/.claude/settings.json`; Copilot CLI: `~/.copilot/hooks/use-plain-language.json`) that loads
+   the `use-plain-language` rules at the start of every session.
 
 Idempotent preflight scripts (`check-deps.ps1` / `check-deps.sh`) warn on missing components
 without blocking.
 
 ## Skills overview
 
-| Skill | Description | User-invokable |
+| Skill | Description | User-invocable |
 |---|---|---|
 | `blazor-architect` | Route a full Blazor work request across the appropriate specialist lane(s). Triggers on full-request, multi-concern phrasing ("implement this feature", "review and refactor this page"). Delegates to dotnet-blazor plugin skills as specialist resources. | Yes |
 | `self-improve` | Loaded by `blazor-architect` when `--self-improve` is active. Handles improvement report generation (algorithm, dedup, ranking), report-server auto-launch on port 5173, and CLI staging readiness. | No |
 | `setup-gman-skills` | First-time setup: installs the dotnet-blazor plugin dependency and downloads the report-server binary from GitHub Releases. Run once after `npx skills add`. | Yes |
 | `implement-spec-tickets` | Implement every ticket of one spec: discovers its dependency graph, dispatches parallel worktree agents, and coordinates merge and closure. Invoke as `/implement-spec-tickets <SPEC-TICKET-ID>`. | Yes |
+| `use-plain-language` | Plain-language rules for everything written to the user, with extra rules for question rounds, proposed names and hand-backs. `setup-gman-skills` offers a session-start hook that loads it in every session (Claude Code and Copilot CLI). | Yes (user-invoked only) |
 
 ## Dev workflow
 
