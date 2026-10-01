@@ -1,6 +1,6 @@
 ---
 name: use-plain-language
-description: Plain-language rules for everything written to the user - explanations, reports, reviews, question rounds, proposed names and hand-backs. Loaded at session start by the hook that setup-gman-skills installs; invoke by hand to reload it.
+description: Plain-language rules for everything written to the user - explanations, reports, reviews, question rounds, proposed names and hand-backs. Loaded at session start by the gman-skills plugin hook; invoke by hand to reload it.
 disable-model-invocation: true
 ---
 

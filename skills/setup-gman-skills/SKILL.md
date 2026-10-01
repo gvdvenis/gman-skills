@@ -3,14 +3,16 @@ name: setup-gman-skills
 description: >
   First-time setup for the gman-skills package. Checks whether the dotnet-blazor plugin is installed
   and installs it when missing. Checks whether the report-server binary exists and downloads it
-  from GitHub Releases when missing. Run once after `npx skills add gvdvenis/gman-skills`.
+  from GitHub Releases when missing. Run once after installing the gman-skills plugin (or
+  `npx skills add gvdvenis/gman-skills`).
   Triggers on: "setup gman skills", "/setup-gman-skills", "install gman skills dependencies".
 user-invocable: true
 ---
 
 # setup-gman-skills
 
-First-time setup for the gman-skills package. Run once after `npx skills add gvdvenis/gman-skills`.
+First-time setup for the gman-skills package. Run once after installing the plugin (or
+`npx skills add gvdvenis/gman-skills`).
 
 ## Step 1 — Check and install the dotnet-blazor plugin
 

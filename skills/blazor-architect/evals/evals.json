@@ -9,9 +9,10 @@
       "files": [],
       "expectations": [
         "The run announces a route of 'inline' in the routing summary",
-        "The skill 'author-component' was invoked (visible in the transcript as a skill invocation or explicit reference to loading it)",
+        "The skill 'author-component' was invoked (visible in the transcript as a skill invocation or explicit reference to loading it), or the run printed the '[blazor-architect] Guidance skill author-component not available' line",
         "The output component file uses [Parameter] attributes correctly",
-        "The component includes an EventCallback for the add-to-cart action (guidance from author-component)"
+        "The component includes an EventCallback for the add-to-cart action (guidance from author-component)",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     },
     {
@@ -21,10 +22,11 @@
       "expected_output": "A login form using EditForm with DataAnnotationsValidator, proper @bind usage, and validation summary. The skill should have invoked 'collect-user-input' for form patterns before writing the form code.",
       "files": [],
       "expectations": [
-        "The skill 'collect-user-input' was invoked before form code was written",
+        "The skill 'collect-user-input' was invoked before form code was written, or the run printed the '[blazor-architect] Guidance skill collect-user-input not available' line",
         "The output uses EditForm (not a raw form element)",
         "The output includes DataAnnotationsValidator or equivalent validation component",
-        "Validation errors are displayed inline or via ValidationSummary"
+        "Validation errors are displayed inline or via ValidationSummary",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     },
     {
@@ -34,12 +36,13 @@
       "expected_output": "The skill routes to data-fetching-specialist (delegated) and the specialist invokes 'fetch-and-send-data' for guidance. Output includes a service abstraction, HttpClient registration, and loading/error/empty state handling in the page.",
       "files": [],
       "expectations": [
-        "The skill 'fetch-and-send-data' was invoked (either inline or referenced in the delegated task prompt)",
+        "The skill 'fetch-and-send-data' was invoked (either inline or referenced in the delegated task prompt), or the run printed the '[blazor-architect] Guidance skill fetch-and-send-data not available' line",
         "The route is 'delegate' (multi-file: service + page)",
         "The output includes loading state handling",
         "The output includes error state handling",
         "The output includes empty state handling",
-        "HttpClient is registered via DI (not new'd up inline)"
+        "HttpClient is registered via DI (not new'd up inline)",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     },
     {
@@ -49,10 +52,11 @@
       "expected_output": "The skill should invoke 'fluentui-blazor' as an overlay alongside the active lane. The output uses FluentDataGrid and related Fluent components with correct provider setup.",
       "files": [],
       "expectations": [
-        "The skill 'fluentui-blazor' was invoked as an overlay",
+        "The skill 'fluentui-blazor' was invoked as an overlay, or the run printed the '[blazor-architect] Guidance skill fluentui-blazor not available' line",
         "The output uses FluentDataGrid (not MudBlazor or standard HTML table)",
         "Fluent UI provider/setup is present or referenced",
-        "Sorting capability is included in the grid implementation"
+        "Sorting capability is included in the grid implementation",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     },
     {
@@ -66,7 +70,8 @@
         "At least two guidance skills were invoked (author-component + collect-user-input and/or fetch-and-send-data)",
         "The output includes a reusable component (ProductGrid)",
         "The output includes a search filter form",
-        "The output fetches data from /api/products"
+        "The output fetches data from /api/products",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     },
     {
@@ -77,9 +82,10 @@
       "files": [],
       "expectations": [
         "The route is 'delegate' (extraction always delegates)",
-        "The skill 'blazor-component-architect' was invoked or referenced for extraction guidance",
+        "The skill 'blazor-component-architect' was invoked or referenced for extraction guidance, or the run printed the '[blazor-architect] Guidance skill blazor-component-architect not available' line",
         "The output includes at least two extracted component files",
-        "The original Checkout.razor is updated to use the extracted components"
+        "The original Checkout.razor is updated to use the extracted components",
+        "analysis.json is written and validates against references/analysis-schema.json"
       ]
     }
   ]

@@ -209,5 +209,5 @@ Choose an action:
   then write the new file and stage it.
 - **Discard**: overwrite and stage without preserving the existing file.
 
-If the prompt receives no response within 30 seconds (e.g. non-interactive terminal), the CLI
-defaults to **Continue** and logs the skipped staging decision in the run artifact.
+If the user picks nothing (for example in a non-interactive run), the CLI defaults to
+**Continue** and logs the skipped staging decision in the run artifact.

@@ -1,6 +1,6 @@
 ---
 name: implement-spec-tickets
-description: Implement every ticket belonging to one spec by discovering its dependency graph, dispatching parallel worktree agents, and coordinating merge and closure until the full spec is complete.
+description: Implements every ticket belonging to one spec by discovering its dependency graph, dispatching parallel worktree agents, and coordinating merge and closure until the full spec is complete. Use when the user runs /implement-spec-tickets with a spec ticket ID.
 disable-model-invocation: true
 argument-hint: "<SPEC-TICKET-ID>"
 ---
@@ -49,7 +49,7 @@ mutate tickets, create worktrees, or launch implementation agents.
 
 ### GitLab ticket convention
 
-For this repository, discover the child set as follows:
+For GitLab-tracked repositories, discover the child set as follows:
 
 1. Read the spec with `glab issue view <SPEC-ID> --comments -F json`.
 2. Collect candidate IDs from automatic notes shaped like `mentioned in issue #<ID>`. Also include

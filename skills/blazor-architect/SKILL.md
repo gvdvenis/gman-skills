@@ -2,7 +2,7 @@
 name: blazor-architect
 user-invocable: true
 description: >
-  Route a full Blazor work request across the appropriate specialist lane(s). Use when the request
+  Routes a full Blazor work request across the appropriate specialist lane(s). Use when the request
   spans more than one concern (authoring, data, auth, review) or when lane selection itself is
   uncertain. Triggers on full-request phrasing: "implement this feature", "review and refactor this
   page", "build this form end-to-end". Distinct from blazor-component-architect (user-level, external,
@@ -66,11 +66,7 @@ Route: delegate (component-author → data-fetching-specialist, serial)
 
 For narrow tasks (single lane, ≤ 2 files, no broad repo discovery), do the work directly in this
 context. **Before writing any Blazor code**, invoke the plugin skill that matches the active lane
-(see the specialist lane table below). These skills contain patterns, parameter rules, lifecycle
-guidance, and anti-pattern checks that the model would otherwise have to reinvent — invoking them
-is the difference between code that follows Blazor conventions and code that looks right but
-breaks at runtime. The skill invocation loads focused, lane-specific guidance directly into
-context, so the cost is low and the accuracy gain is high.
+(see the specialist lane table below).
 
 ### Delegated execution
 
@@ -99,11 +95,9 @@ plugin prefix, e.g. `dotnet-blazor:author-component`. The
 `fluentui-blazor` skill (user-level) covers Fluent UI component usage. Invoke them the same way —
 by name.
 
-Why this matters: each guidance skill encodes hard-won knowledge about Blazor lifecycle ordering,
-parameter constraints, render-mode boundaries, and common pitfalls. Skipping the invocation
-means relying on the model's general Blazor knowledge, which is less accurate and less
-up-to-date than the curated skill content. The skills also call out what *not* to do, which is
-often more valuable than what to do.
+Why this matters: each guidance skill encodes lifecycle ordering, parameter constraints,
+render-mode boundaries and anti-patterns. Without it, code tends to look right but break at
+runtime.
 
 If a guidance skill is not in the list of available skills, do not guess its content: continue
 without it, and end the final output with this line for each missing `dotnet-blazor` skill:
@@ -112,7 +106,8 @@ without it, and end the final output with this line for each missing `dotnet-bla
 [blazor-architect] Guidance skill <name> not available. Run /setup-gman-skills to install the dotnet-blazor plugin.
 ```
 
-Each specialist must return a structured report matching `references/feedback-report-template.json`.
+Each specialist must return a structured report matching `references/feedback-report-template.json`
+(filled-in example: `references/feedback-report-example.json`).
 On first validation failure, request one schema-repair retry; on second failure, mark the lane
 `failed_report_schema` and preserve raw output.
 
@@ -150,7 +145,8 @@ unresolved findings are recorded for the run summary.
 
 ## Step 6 — Write run artifacts
 
-Write `analysis.json` to `~/.self-improve-reports/blazor-architect/runs/<run_id>/` containing:
+Write `analysis.json` to `~/.self-improve-reports/blazor-architect/runs/<run_id>/`, conforming to
+`references/analysis-schema.json`, containing:
 
 - `run_id`, `final_status` (precedence: failed > blocked > partial > success)
 - `status_counts`, `lane_outcomes[]`

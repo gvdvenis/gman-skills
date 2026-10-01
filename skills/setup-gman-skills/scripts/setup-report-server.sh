@@ -58,7 +58,7 @@ download_url=$(echo "$api_response" | grep -o '"browser_download_url": *"[^"]*"'
 if [ -z "$download_url" ]; then
     echo "WARNING: No asset matching '$asset_pattern' found in latest release."
     echo "Attempting to build from source..."
-    REPO_ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
+    REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
     SRC_DIR="$REPO_ROOT/src/report-server/ReportServer"
     if [ -d "$SRC_DIR" ] && command -v dotnet >/dev/null 2>&1; then
         mkdir -p "$INSTALL_DIR"

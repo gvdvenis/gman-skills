@@ -2,9 +2,9 @@
 name: self-improve
 user-invocable: false
 description: >
-  Loaded by blazor-architect when --self-improve is active. Not user-invocable — appears in the
-    skills list but can only be loaded by blazor-architect, not called directly. Handles improvement
-    report generation, C# server auto-launch, and CLI staging.
+  Generates the self-improvement report for a blazor-architect run, launches the local
+  report-server to show it, and stages the reviewed report in git. Use only when blazor-architect
+  runs with --self-improve; never on its own.
 ---
 
 # Self-improve skill
@@ -12,28 +12,12 @@ description: >
 Activated by `blazor-architect` when `--self-improve` is set. Runs after all specialist work and
 the review loop have completed.
 
-## Step 1 — Create the run directory
+## Step 1 — Generate the improvement report
 
-Create `~/.self-improve-reports/blazor-architect/runs/<run_id>/` if it does not exist.
-
-**Done when:** the run directory exists on disk.
-
-## Step 2 — Generate the improvement report
-
-Consult `references/self-improve-generation.md` for the complete algorithm. The ordered steps:
-
-1. Collect all `self_diagnosis.issues` entries from specialist reports in the run.
-2. Map each to a raw finding (title, summary, category, severity, expected_impact, prompt_fragment, evidence).
-3. Derive `suggestion_key` for each finding (`<category>:<target_surface>:<normalized_intent>`).
-4. Load `~/.self-improve-reports/blazor-architect/suggestion-history.json` if present.
-5. Hard-exclude findings with `never_again` history entries.
-6. Group by `suggestion_key`, fold using merge rules (max severity, evidence union, recurrence count).
-7. Apply `history_weight` from most recent decision per key.
-8. Compute `ranking_score` (base_severity_weight + recurrence_boost + history_weight).
-9. Sort by severity group, then ranking_score descending, then first_seen ascending.
-10. Assign sequential ids (f-001, f-002, ...).
-11. Build the origin block from current run context.
-12. Write `improvement-report-data.json` to the run directory.
+Follow the generation algorithm in `references/self-improve-generation.md` (section "Generation
+algorithm"). It collects the `self_diagnosis.issues` from the specialist reports, folds and ranks
+them against the cross-run suggestion history, and writes `improvement-report-data.json` to the
+run directory that blazor-architect created in its step 6.
 
 The file must conform to `references/improvement-report-data-schema.json` (schema version 1.1).
 A valid example is at `references/improvement-report-data-example.json`.
@@ -63,7 +47,7 @@ them after user actions.
 **Done when:** `improvement-report-data.json` is written to the run directory with valid findings
 (or an empty findings array if no self-diagnosis issues were collected).
 
-## Step 3 — Launch the report-server
+## Step 2 — Launch the report-server
 
 The report-server binary lives at `~/.copilot/gman-skills/bin/report-server.exe` (Windows) or
 `~/.copilot/gman-skills/bin/report-server` (Linux/macOS). Launch it with the report file path:
@@ -100,7 +84,7 @@ without the server — the report file is still useful on its own.
 **Done when:** the server is running and responding on port 5173, or the binary is missing and a
 warning has been printed.
 
-## Step 4 — Staging readiness (after server session ends)
+## Step 3 — Staging readiness (after server session ends)
 
 After the server shuts down (user calls `GET /shutdown`, idle timeout, or terminal end), check the
 report file for staging readiness:
@@ -109,8 +93,8 @@ report file for staging readiness:
 - When ready, stage: `git add ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json`
 
 If the file is already git-tracked and has local modifications, present the conflict flow
-(continue / stash / discard) from `references/self-improve-generation.md § Conflict flow`. Default
-to "Continue" after 30 seconds of no response.
+(continue / stash / discard) from `references/self-improve-generation.md` section "Conflict flow".
+Ask once; if the user picks nothing, continue.
 
 **Done when:** staging is complete or the file is not ready to stage.
 
