@@ -12,7 +12,8 @@ user-invocable: true
 # setup-gman-skills
 
 First-time setup for the gman-skills package. Run once after installing the plugin (or
-`npx skills add gvdvenis/gman-skills`).
+`npx skills add gvdvenis/gman-skills`). Both steps are idempotent: check first, act only when
+something is missing.
 
 ## Step 1 — Check and install the dotnet-blazor plugin
 
@@ -26,8 +27,6 @@ If **missing**, install it in two steps:
 In Claude Code the plugin's skills load in the next session, not the current one; say so in the
 summary.
 
-If **present**, skip — it is already installed.
-
 Record the result: `installed` (was just installed), `present` (was already there), or `failed`.
 
 **Done when:** the dotnet-blazor plugin is installed or confirmed present, or the install failed
@@ -38,8 +37,6 @@ and the error is recorded.
 Check whether the report-server binary exists at `~/.copilot/gman-skills/bin/`:
 - **Windows**: `report-server.exe`
 - **Linux / macOS**: `report-server` (no extension)
-
-If **present**, skip — it is already installed. Record `present`.
 
 If **missing**, run the platform-appropriate download script from this skill's `scripts/` directory:
 - **Windows**: `scripts/setup-report-server.ps1`

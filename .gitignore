@@ -4,6 +4,7 @@
 
 # Session / scratch
 .scratch/
+!skills/*/evals/fixtures/**/.scratch/
 
 # Playwright MCP snapshots (smoke test artifacts)
 .playwright-mcp/

@@ -64,7 +64,6 @@ Each run uses a unique `<run_id>` and writes locally to:
 
 ```text
 ~/.blazor-architect/runs/<run_id>/
-  events.jsonl
   reports/<agent-id>.json
   analysis.json
   reports/self-improvement-report.html

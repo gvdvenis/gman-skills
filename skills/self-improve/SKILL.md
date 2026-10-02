@@ -93,7 +93,7 @@ report file for staging readiness:
 - When ready, stage: `git add ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json`
 
 If the file is already git-tracked and has local modifications, present the conflict flow
-(continue / stash / discard) from `references/self-improve-generation.md` section "Conflict flow".
+(continue / backup / discard) from `references/self-improve-generation.md` section "Conflict flow".
 Ask once; if the user picks nothing, continue.
 
 **Done when:** staging is complete or the file is not ready to stage.

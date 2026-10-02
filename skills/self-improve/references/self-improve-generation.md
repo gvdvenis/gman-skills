@@ -7,10 +7,10 @@ This document specifies the deterministic rules the CLI orchestrator follows to 
 2. [suggestion_key derivation](#suggestion_key-derivation)
 3. [Cross-run dedup fold rules](#cross-run-dedup-fold-rules)
 4. [Ranking formula](#ranking-formula)
-5. [Dismissal and history-weight application](#dismissal-and-history-weight-application)
-6. [Generation algorithm (ordered steps)](#generation-algorithm)
-7. [CLI staging readiness signal](#cli-staging-readiness-signal)
-8. [Conflict flow](#conflict-flow)
+5. [Generation algorithm (ordered steps)](#generation-algorithm)
+6. [Conflict flow](#conflict-flow)
+
+Staging readiness lives in the `self-improve` SKILL.md, step 3.
 
 ---
 
@@ -30,8 +30,8 @@ C# server.
 
 ## suggestion_key derivation
 
-A `suggestion_key` is a stable, normalized string that identifies the same weakness or gap across
-multiple runs, independent of phrasing and severity score variation.
+A `suggestion_key` is the finding's fingerprint: the same weakness across runs, whatever the
+wording or severity score.
 
 **Derivation recipe:**
 
@@ -59,11 +59,8 @@ suggestion_key = "<category>:<target_surface>:<normalized_intent>"
 
 ## Cross-run dedup fold rules
 
-Before writing `findings[]`, the orchestrator folds all raw findings from the current run
-against the cross-run suggestion history (if it exists at
-`~/.self-improve-reports/blazor-architect/suggestion-history.json`).
-
-**Fold merge rules:**
+Raw findings with the same `suggestion_key`, from this run and from the suggestion history at
+`~/.self-improve-reports/blazor-architect/suggestion-history.json`, fold into one finding:
 
 | Field | Rule |
 |---|---|
@@ -74,9 +71,6 @@ against the cross-run suggestion history (if it exists at
 | `first_seen` | Min `generated_at` timestamp across all occurrences |
 | `last_seen` | Max `generated_at` timestamp across all occurrences (equals current run for new occurrences) |
 | `id` | Assigned fresh per-run (e.g. `f-001`, `f-002`, sequential). Not stable across runs. |
-
-**never_again exclusion:** Any `suggestion_key` with a `never_again` entry in history is excluded
-from `findings[]` entirely before the fold step. It never reaches the HTML.
 
 ---
 
@@ -115,24 +109,12 @@ gets no boost.
 | `never_again` | excluded — not ranked |
 
 Only the most recent decision for a `suggestion_key` contributes to `history_weight`. Earlier
-decisions for the same key are informational only.
+decisions for the same key are informational only. An active dismissal outweighs the largest
+recurrence boost (−1.5 vs +0.3); the finding still keeps its recurrence count and evidence.
 
-**Sort order:** Findings are sorted descending by `ranking_score` within each severity group
-(severity groups are shown separately in the HTML). Ties are broken by `recurrence_count`
-descending, then by `first_seen` ascending (older issues first).
-
----
-
-## Dismissal and history-weight application
-
-1. Collect all `suggestion_key` values from the current run's raw findings.
-2. Load `~/.self-improve-reports/blazor-architect/suggestion-history.json` (if it exists).
-3. For each raw finding key: look up its most recent history entry.
-4. Apply `never_again` exclusion first (hard exclude).
-5. Apply `history_weight` to `ranking_score` (soft deprioritize for active dismissal cooldown).
-6. The dismissal penalty will ordinarily outweigh the recurrence boost for an actively dismissed
-   key (e.g. penalty −1.5 vs max boost +0.3 = net −1.2 from base). The recurrence count and
-   evidence union are still preserved in the finding record for visibility.
+**Sort order:** by severity group (critical → high → medium → low; the HTML shows the groups
+separately), then `ranking_score` descending, then `recurrence_count` descending, then
+`first_seen` ascending (older issues first).
 
 ---
 
@@ -145,46 +127,17 @@ reports have been validated and the review loop has completed.
 1.  Collect all self_diagnosis.issues entries from all specialist reports in the run.
 2.  Map each issue to a raw finding: { specialist, issue_index, title, summary, category,
     severity, expected_impact, prompt_fragment, evidence: [{ specialist, issue_index }] }
-    Note: severity is pre-derived upstream and present in the self_diagnosis report;
-    do NOT compute severity here.
-3.  Derive suggestion_key for each raw finding using the derivation recipe above.
-4.  Load suggestion-history.json from the user-level Copilot directory (if present; skip
-    silently if absent or unreadable).
-5.  Hard-exclude any raw finding whose suggestion_key has a never_again history entry.
-6.  Group remaining raw findings by suggestion_key.
-7.  For each group (same suggestion_key), fold into one finding record using the merge rules.
-8.  Apply history_weight from the most recent decision for each suggestion_key.
-9.  Compute ranking_score for each folded finding.
-10. Sort by severity group (critical → high → medium → low), then by ranking_score descending
-    within each group, applying tie-break rules.
-11. Assign sequential ids (f-001, f-002, ...) in sort order.
-12. Build the origin block from current run context.
-13. Write improvement-report-data.json to the run directory with:
-    - schema_version: "1.1"
-    - generated_at: current ISO timestamp
-    - origin: as built in step 12
-    - findings: sorted, folded array from step 11
-    - decisions: {} (empty object)
-    - shipped_prompt: null
-14. Emit an analysis event to events.jsonl referencing the generated file path.
-```
-
----
-
-## CLI staging readiness signal
-
-The CLI checks the run's `improvement-report-data.json` after a server session ends (server
-shutdown or idle timeout). The file is ready to stage when **either** of the following is true:
-
-- `decisions` object is non-empty (user has taken at least one action via `POST /api/dismissals`
-  or `POST /api/ship-prompt`)
-- `shipped_prompt` is non-null (user has shipped a prompt via `POST /api/ship-prompt`)
-
-When the readiness signal is detected, the CLI stages the file alongside any implementation
-changes from the run:
-
-```
-git add ~/.self-improve-reports/blazor-architect/runs/<run_id>/improvement-report-data.json
+    Severity comes from the self_diagnosis report; do NOT compute it here.
+3.  Derive each raw finding's suggestion_key (see suggestion_key derivation).
+4.  Load suggestion-history.json (see Cross-run dedup fold rules); skip silently if absent or
+    unreadable.
+5.  Drop every raw finding whose suggestion_key has a never_again entry. It never reaches the HTML.
+6.  Fold the rest by suggestion_key (see Cross-run dedup fold rules).
+7.  Compute ranking_score and sort (see Ranking formula).
+8.  Assign sequential ids (f-001, f-002, ...) in sort order.
+9.  Write improvement-report-data.json to the run directory in the shape shown in the
+    self-improve SKILL.md, step 1: generated_at is now, origin comes from the current run,
+    findings from step 8.
 ```
 
 ---
@@ -200,12 +153,12 @@ before staging:
 improvement-report-data.json for run-YYYYMMDD-HHMM has local changes.
 Choose an action:
   [c] Continue — keep existing file as-is, do not restage
-  [s] Stash — move existing file to improvement-report-data.json.bak before staging new
+  [b] Backup — copy existing file to improvement-report-data.json.bak before staging new
   [d] Discard — overwrite existing file with newly generated version
 ```
 
 - **Continue**: no file operation; user manages the conflict manually.
-- **Stash**: write existing file to `improvement-report-data.json.bak` in the same directory,
+- **Backup**: write existing file to `improvement-report-data.json.bak` in the same directory,
   then write the new file and stage it.
 - **Discard**: overwrite and stage without preserving the existing file.
 

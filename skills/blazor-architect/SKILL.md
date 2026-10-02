@@ -2,11 +2,11 @@
 name: blazor-architect
 user-invocable: true
 description: >
-  Routes a full Blazor work request across the appropriate specialist lane(s). Use when the request
-  spans more than one concern (authoring, data, auth, review) or when lane selection itself is
-  uncertain. Triggers on full-request phrasing: "implement this feature", "review and refactor this
-  page", "build this form end-to-end". Distinct from blazor-component-architect (user-level, external,
-  single-lane authoring guidance that may be invoked as a specialist resource).
+  Routes a full Blazor work request across the appropriate specialist lane(s). Use when a Blazor
+  request spans more than one concern (authoring, data, auth, review) or when lane selection itself
+  is uncertain. Triggers on full-request phrasing in a Blazor project: "implement this Blazor
+  feature", "review and refactor this page", "build this form end-to-end". For a single lane,
+  invoke that lane's guidance skill directly.
 ---
 
 # Blazor architect skill
@@ -74,12 +74,14 @@ For broader tasks, dispatch sub-agents (the `task` tool in Copilot CLI, the `Age
 Claude Code). Each specialist lane receives a bounded task for
 one lane. Specialist lanes:
 
-| Lane | Scope | Guidance skill | Delegate? |
-|---|---|---|---|
-| component-author | Create a new component, parameters, lifecycle, CSS isolation | `author-component` | Inline if ≤ 2 files |
-| component-extractor | Extract sections from a page into reusable components | `blazor-component-architect` | Always delegate |
-| form-specialist | Forms, binding, validation, EditForm, @bind | `collect-user-input` | Inline if 1–2 files |
-| data-fetching-specialist | HttpClient, service abstractions, loading/error/empty states | `fetch-and-send-data` | Always delegate |
+| Lane | Scope | Guidance skill |
+|---|---|---|
+| component-author | Create a new component, parameters, lifecycle, CSS isolation | `author-component` |
+| component-extractor | Extract sections from a page into reusable components | `blazor-component-architect` |
+| form-specialist | Forms, binding, validation, EditForm, @bind | `collect-user-input` |
+| data-fetching-specialist | HttpClient, service abstractions, loading/error/empty states | `fetch-and-send-data` |
+
+Whether a lane runs inline or delegated comes from the classifier in step 3.
 
 #### How to invoke the guidance skills
 
@@ -124,21 +126,14 @@ conforms to the feedback-report schema.
 
 ## Step 5 — Review gate
 
-Check the `skip_code_review` flag that was parsed in step 2. This is a gate — make the decision
-before dispatching any review sub-agent.
+Run this step only after all specialist work is complete.
 
-**When `skip_code_review` is true:** do not spawn a review sub-agent. Set `review_outcome` to
-`"skipped"`. Proceed to step 6.
+**When `skip_code_review` is true:** spawn no review sub-agent. Set `review_outcome` to
+`"skipped"` and go to step 6.
 
-**When `skip_code_review` is false:** run the review loop — a dedicated review sub-agent that runs
-the `code-review` skill. The review loop:
-
-- Maximum 3 passes (initial + 2 fix-and-review cycles).
-- Stop early when a pass returns zero actionable findings.
-- Actionable = concrete defect, file-specific, not stylistic. See `references/review-loop-contract.md`.
-
-The decision is made here, not during execution — the review sub-agent is only dispatched when the
-flag was not set, and only after all specialist work is complete.
+**Otherwise:** run the review loop in `references/review-loop-contract.md`. It caps the passes,
+defines an actionable finding, and sets `review_outcome`. The review sub-agent runs the
+`code-review` skill: Claude Code lists it as `mattpocock-skills:code-review`.
 
 **Done when:** review is complete or skipped. Either zero actionable findings remain, or
 unresolved findings are recorded for the run summary.

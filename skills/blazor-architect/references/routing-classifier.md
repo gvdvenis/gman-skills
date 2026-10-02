@@ -46,13 +46,6 @@ If either condition is not met, delegate serially.
 | Narrow file edit with clear boundary | Inline | Inline | Single lane, ≤ 2 files confirmed |
 | Lane selection uncertain | — | Delegate | Apply ambiguous default |
 
-## Fluent UI constraint layer
-
-Fluent UI is **not a lane**. It is a cross-lane constraint applied alongside the selected primary
-lane whenever Fluent components, providers, or theming are in scope. Invoke the `fluentui-blazor`
-skill as an overlay on top of whichever specialist is active. Do not route Fluent UI work to a
-dedicated agent.
-
 ## Override recording
 
 When the orchestrator departs from the table (e.g. a category that doesn't appear above, or a

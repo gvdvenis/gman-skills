@@ -60,7 +60,6 @@ Ship a plugin-scoped orchestration skill (`blazor-orchestrator`) that is the doc
 - **Plugin manifest**: `plugin.json` is loader contract; `manifest.yaml` is documentation-only.
 - **Run artifact root**: `~/.copilot/blazor-orchestration/runs/<run_id>/`.
 - **Artifacts**:
-  - `events.jsonl`
   - `reports/<agent-id>.json`
   - `analysis.json`
   - `reports/self-improvement-report.html` only with `--self-improve`
@@ -91,7 +90,7 @@ Ship a plugin-scoped orchestration skill (`blazor-orchestrator`) that is the doc
 
 - Ambiguous route defaults to delegate.
 - Malformed/missing specialist report: one retry, then explicit failed semantics; raw output retained in run artifacts.
-- Review unresolved after cap: lane status `review_unresolved`, required unresolved findings persisted, `review_loop_stopped` event emitted.
+- Review unresolved after cap: lane status `blocked` and `review_outcome` `review_unresolved`, required unresolved findings persisted in `analysis.json`.
 - `tool_missed` is advisory-only and recorded only from explicit specialist self-diagnosis under `--self-improve`.
 - Direct specialist invocation remains functional but produces no orchestrator run record or telemetry envelope.
 
@@ -116,7 +115,7 @@ Ship a plugin-scoped orchestration skill (`blazor-orchestrator`) that is the doc
 - Routing behavior matches locked classifier thresholds.
 - Specialist report schema is enforced including retry-then-fail path.
 - Review-loop cap and unresolved-handling behavior is honored.
-- Artifact layout and mandatory events/fields match contract.
+- Artifact layout and mandatory fields match contract.
 - `--self-improve` remains opt-in and advisory-only.
 - A golden-path smoke run validates delegated flow and artifact emission.
 - Fixtures exist in `fixtures/smoke-run/` with minimal valid examples for success, blocked, and aggregated analysis.
@@ -133,7 +132,7 @@ Ship a plugin-scoped orchestration skill (`blazor-orchestrator`) that is the doc
   - Ambiguous defaults to delegate.
   - Parallel fan-out only for independent lanes with at least one specialist-turn savings each.
 - Lane-admission rule requires repeated independent demand, clear failure-mode separation, and stable contract.
-- Run-level aggregation classes are fixed: success class (`success`), blocked class (`blocked`, `review_unresolved`), failed class (`failed`, `failed_report_schema`).
+- Run-level aggregation classes are fixed: success class (`success`), blocked class (`blocked`), failed class (`failed`, `failed_report_schema`).
 
 ## Testing Decisions
 
@@ -151,7 +150,7 @@ Ship a plugin-scoped orchestration skill (`blazor-orchestrator`) that is the doc
 2. Implement orchestrator invocation parsing and route classifier table.
 3. Wire specialist lane contracts and strict report parser/validator.
 4. Implement review-lane integration with capped fix-and-review loop.
-5. Implement telemetry writer (`events.jsonl`, `reports/*.json`, `analysis.json`) and aggregation logic.
+5. Implement telemetry writer (`reports/*.json`, `analysis.json`) and aggregation logic.
 6. Add hook-level delegation drift audit.
 7. Produce `fixtures/smoke-run/` contract fixtures and run checklist-driven smoke validation.
 8. Finalize docs updates including semver/breaking-change policy.

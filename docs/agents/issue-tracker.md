@@ -15,4 +15,7 @@ Issues and specs for this package live as markdown files in `.scratch/`.
 - Map: `.scratch/<effort>/map.md`
 - Child tickets: `.scratch/<effort>/issues/NN-<slug>.md`
 - Tickets use `Type:` and `Status:` lines
-- Resolve tickets by adding an `## Answer` section and updating the map
+- **Blocking**: a `Blocked by: NN, NN` line near the top. A ticket is unblocked when every file it lists is `resolved`.
+- **Frontier**: scan `.scratch/<effort>/issues/` for files that are open, unblocked, and unclaimed; first by number wins.
+- **Claim**: set `Status: claimed` and save before any work.
+- **Resolve**: append the answer under an `## Answer` heading, set `Status: resolved`, then append a context pointer (gist + link) to the map's Decisions-so-far in `map.md`.

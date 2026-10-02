@@ -20,7 +20,7 @@ A maximum of **3 review passes** can run in total (initial + 2 fix-and-review cy
 |---|---|---|
 | Pass 0 | Initial review | Review sub-agent runs against the specialist output. |
 | Pass 1 | First fix cycle | If actionable findings exist, a targeted fix prompt is sent to the specialist (limited to those findings). Review sub-agent runs again. |
-| Pass 2 | Second fix cycle | If actionable findings still remain, loop **stops**. No further cycles. |
+| Pass 2 | Second fix cycle | If actionable findings still exist, one more targeted fix and one more review run. Findings left after this review are unresolved; the loop **stops**. |
 
 The loop also exits early when any review pass returns zero actionable findings.
 
@@ -46,13 +46,13 @@ When the loop ends with **unresolved actionable findings** (either after cycle 2
 
 | Output | Details |
 |---|---|
-| `status` in run artifact | Set to `"review_unresolved"` (new terminal status alongside `success`, `blocked`, `failed`). |
+| `review_outcome` in `analysis.json` | `"review_unresolved"`. |
+| Lane `status` in `analysis.json` | `"blocked"`, so `final_status` is at least `blocked`. |
 | `review_findings` in `analysis.json` | Array of objects: `{ file, line_range?, severity, description }`. |
-| `review_loop_stopped` in `events.jsonl` | Mandatory event. Required fields: `run_id`, `timestamp`, `lane`, `cycles_completed`, `unresolved_findings_count`. |
 | Orchestrator closing line | Surfaces unresolved-findings count and run directory path. |
 
-When the loop exits cleanly (no unresolved findings), `status` is `success` and no
-`review_loop_stopped` event is emitted.
+When the loop exits cleanly (no unresolved findings), the lane keeps its status from the
+specialist's report.
 
 ---
 

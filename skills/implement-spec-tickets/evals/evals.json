@@ -1,0 +1,51 @@
+{
+  "skill_name": "implement-spec-tickets",
+  "setup": "Copy evals/fixtures/repo to a temporary folder, run `git init`, commit everything on `main`, and start the session there. The repo uses a local markdown tracker, so no GitLab or GitHub access is needed.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "linear-chain-runs-in-order",
+      "prompt": "/implement-spec-tickets .scratch/chain",
+      "expected_output": "Three waves (01, then 02, then 03), each ticket merged and closed before the next one starts. NOTES.md ends with alpha, beta, gamma in that order.",
+      "files": ["evals/fixtures/repo"],
+      "expectations": [
+        "The printed dependency map has the edges 01 -> 02 and 02 -> 03 and three waves of one ticket each",
+        "Ticket 02 is dispatched only after ticket 01 shows a verified merge on main and Status: closed",
+        "Each ticket gets its own worktree, and every merge happens in the integration worktree",
+        "Each worker loads references/worker-brief.md and each integrator loads references/integrator-brief.md, by absolute path",
+        "Each worker reports `review: skipped` because only a doc file changed",
+        "main has three --no-ff merge commits, each with the ticket number in its message",
+        "NOTES.md ends with the lines alpha, beta, gamma in that order",
+        "The spec stays open, and the run ends with a hand-off note on the spec and a one-sentence /clear suggestion"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "fan-in-runs-independent-tickets-in-parallel",
+      "prompt": "/implement-spec-tickets .scratch/fan-in",
+      "expected_output": "Wave 1 holds 01 and 02, dispatched together; wave 2 holds 03. The second merge of wave 1 has a mechanical conflict on NOTES.md that the integrator resolves by keeping both lines.",
+      "files": ["evals/fixtures/repo"],
+      "expectations": [
+        "The printed dependency map has the edges 01 -> 03 and 02 -> 03, with 01 and 02 in wave 1 and 03 in wave 2",
+        "The workers for 01 and 02 are spawned in the same turn",
+        "Merges happen one at a time, 01 before 02",
+        "The NOTES.md conflict is resolved by keeping both red and blue, not by aborting the merge",
+        "Ticket 03 is dispatched from the integrated HEAD that contains both earlier merges",
+        "NOTES.md contains red and blue, and purple after both"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "backlink-without-parent-is-excluded",
+      "prompt": "/implement-spec-tickets .scratch/backlink",
+      "expected_output": "Only ticket 01 is implemented. Ticket 02 appears under excluded references, because it mentions the spec but declares no parent.",
+      "files": ["evals/fixtures/repo"],
+      "expectations": [
+        "The graph lists 02-research.md under excluded references, with the reason that it has no ## Parent section",
+        "No worker, worktree or branch is created for ticket 02",
+        "Ticket 02 keeps Status: open and NOTES.md has no line added for it",
+        "Ticket 01 is merged and closed, and NOTES.md contains the line one"
+      ]
+    }
+  ]
+}

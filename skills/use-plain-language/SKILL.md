@@ -1,7 +1,8 @@
 ---
 name: use-plain-language
-description: Plain-language rules for everything written to the user - explanations, reports, reviews, question rounds, proposed names and hand-backs. Loaded at session start by the gman-skills plugin hook; invoke by hand to reload it.
+description: Sets plain-language rules for everything written to the user - explanations, reports, reviews, question rounds, proposed names and hand-backs. The gman-skills plugin's session-start hook loads it into every session; neither the user nor the model invokes it.
 disable-model-invocation: true
+user-invocable: false
 ---
 
 # Use plain language
@@ -21,13 +22,22 @@ Plain language changes the wording only. Keep every detail and every recommendat
   measure, in ordinary words.
 - Use words the user has used or `CONTEXT.md` defines. Where a new term seems needed, say what
   the code does instead.
+- Add an example where a description alone is hard to follow: an architecture decision, a new
+  concept, or a change in code flow. For a code-flow change, show the call tree before and after:
+
+  ```text
+  Before: SaveAsync -> Validate -> Repository.Save
+  After:  SaveAsync -> Validate -> Outbox.Add -> (background worker) Repository.Save
+  ```
+
 - A trade-off with numbers gets a small comparison table.
 - End a recommendation with what it costs.
 
 ## Question rounds
 
-Grilling, wayfinder, domain-modeling, decision tables, lists of findings to pick from. The
-skill that asks still sets the rounds and their order; this section sets the wording.
+Question rounds come from skills that ask the user question after question (such as grilling
+and domain-modeling), and from decision tables and lists of findings to pick from. The skill that
+asks still sets the rounds and their order; this section sets the wording.
 
 1. **Scene first.** Open with two or three sentences: what the topic is, why it comes up now,
    what is being decided.
@@ -38,7 +48,7 @@ skill that asks still sets the rounds and their order; this section sets the wor
 4. **Menus follow prose.** Before a pick-from menu (such as AskUserQuestion), explain each
    option in prose with one real example.
 
-When no grilling skill is running, also number every question, spell out the options as
+When no question-asking skill is running, also number every question, spell out the options as
 (a) / (b) / (c), and end each question with your recommended answer, so the user can reply
 `Q3 b`.
 
