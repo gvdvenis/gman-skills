@@ -1,80 +1,42 @@
 ---
 name: setup-gman-skills
-description: >
-  First-time setup for the gman-skills package. Checks whether the dotnet-blazor plugin is installed
-  and installs it when missing. Checks whether the report-server binary exists and downloads it
-  from GitHub Releases when missing. Run once after installing the gman-skills plugin (or
-  `npx skills add gvdvenis/gman-skills`).
-  Triggers on: "setup gman skills", "/setup-gman-skills", "install gman skills dependencies".
-user-invocable: true
+description: First-time setup for gman-skills. Installs the dotnet-blazor plugin and downloads the report-server binary when either is missing.
+disable-model-invocation: true
 ---
 
 # setup-gman-skills
 
-First-time setup for the gman-skills package. Run once after installing the plugin (or
-`npx skills add gvdvenis/gman-skills`). Both steps are idempotent: check first, act only when
-something is missing.
+Check first; act only when something is missing.
 
-## Step 1 — Check and install the dotnet-blazor plugin
+## Step 1 — dotnet-blazor plugin
 
-Use the CLI of the agent running this skill: `copilot` in Copilot CLI, `claude` in Claude Code.
-Run `<cli> plugin list` and look for `dotnet-blazor` in the output.
+Use `copilot` in Copilot CLI and `claude` in Claude Code. When `<cli> plugin list` does not show
+`dotnet-blazor`:
 
-If **missing**, install it in two steps:
 1. `<cli> plugin marketplace add dotnet/skills`
 2. `<cli> plugin install dotnet-blazor@dotnet-agent-skills`
 
-In Claude Code the plugin's skills load in the next session, not the current one; say so in the
-summary.
+Status: `installed`, `present`, or `failed` with the error. In Claude Code, say in the summary
+that the plugin's skills load in the next session.
 
-Record the result: `installed` (was just installed), `present` (was already there), or `failed`.
+## Step 2 — report-server binary
 
-**Done when:** the dotnet-blazor plugin is installed or confirmed present, or the install failed
-and the error is recorded.
+Look for `~/.copilot/gman-skills/bin/report-server.exe` (Windows) or `report-server`
+(Linux/macOS). When missing, run `scripts/setup-report-server.ps1` (Windows) or
+`scripts/setup-report-server.sh`. Status: `downloaded`, `present`, or `failed` with the error.
 
-## Step 2 — Check and download the report-server binary
+## Step 3 — Summary
 
-Check whether the report-server binary exists at `~/.copilot/gman-skills/bin/`:
-- **Windows**: `report-server.exe`
-- **Linux / macOS**: `report-server` (no extension)
-
-If **missing**, run the platform-appropriate download script from this skill's `scripts/` directory:
-- **Windows**: `scripts/setup-report-server.ps1`
-- **Linux / macOS**: `scripts/setup-report-server.sh`
-
-The script detects OS + architecture, downloads the matching asset from the `gvdvenis/gman-skills`
-GitHub Releases, and extracts the binary to `~/.copilot/gman-skills/bin/`.
-
-Record the result: `downloaded` (was just downloaded), `present` (was already there), or `failed`.
-
-**Done when:** the binary exists at `~/.copilot/gman-skills/bin/` or the download failed and the
-error is recorded.
-
-## Step 3 — Print the summary
-
-Print a summary table so the user can see what happened. This is mandatory — the user needs
-confirmation that setup worked:
-
-```
-[setup-gman-skills] Setup complete
-
-  Component            Status
-  ───────────────────────────────
-  dotnet-blazor plugin  installed
-  report-server binary  downloaded
-```
-
-If any component failed, print the failure reason and a suggested fix:
+Always print the table. The header says `Setup complete` when nothing failed. A failed row gets
+the reason and a fix:
 
 ```
 [setup-gman-skills] Setup complete with warnings
 
-  Component            Status     Note
+  Component             Status      Note
   ───────────────────────────────────────────────
-  dotnet-blazor plugin  present
-  report-server binary  failed     No GitHub Release found. Build from source:
+  dotnet-blazor plugin  installed
+  report-server binary  failed      No GitHub Release found. Build from source:
                                     cd src/report-server && dotnet publish -c Release -r win-x64
                                     Then copy the binary to ~/.copilot/gman-skills/bin/
 ```
-
-**Done when:** the summary table is printed with every component's status visible.

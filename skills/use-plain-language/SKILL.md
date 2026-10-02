@@ -7,9 +7,7 @@ user-invocable: false
 
 # Use plain language
 
-The user knows technology well and reads each message once. Dense jargon, abstract noun
-phrases and layered clauses make them re-read a passage several times, and a question that
-needs a second read costs a whole round: they send it back and the decision waits.
+The user knows technology well and reads each message once.
 
 Plain language changes the wording only. Keep every detail and every recommendation.
 
@@ -35,9 +33,8 @@ Plain language changes the wording only. Keep every detail and every recommendat
 
 ## Question rounds
 
-Question rounds come from skills that ask the user question after question (such as grilling
-and domain-modeling), and from decision tables and lists of findings to pick from. The skill that
-asks still sets the rounds and their order; this section sets the wording.
+Question rounds: grilling, domain-modeling, decision tables, lists of findings to pick from. The
+asking skill sets the rounds and their order; this section sets the wording.
 
 1. **Scene first.** Open with two or three sentences: what the topic is, why it comes up now,
    what is being decided.
@@ -70,6 +67,4 @@ a credential, or a check on their own machine.
 
 ## Before sending
 
-Re-read the message as the user, once. Done when every question round opens with a scene,
-every question has an example, every word is one the user knows, and a message that waits on
-the user ends with the one thing they must do.
+Re-read the message as the user, once.

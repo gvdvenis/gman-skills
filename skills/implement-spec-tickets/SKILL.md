@@ -1,42 +1,19 @@
 ---
 name: implement-spec-tickets
-description: Implements every ticket belonging to one spec by discovering its dependency graph, dispatching parallel worktree agents, and coordinating merge and closure until the full spec is complete. Use when the user runs /implement-spec-tickets with a spec ticket ID.
+description: Implements every ticket belonging to one spec by discovering its dependency graph, dispatching parallel worktree agents, and coordinating merge and closure until the full spec is complete.
 disable-model-invocation: true
 argument-hint: "<SPEC-TICKET-ID or spec folder>"
 ---
 
 # Implement Spec Tickets
 
-The user invokes this skill as:
-
-```text
-/implement-spec-tickets 29
-```
-
 Treat the argument as the parent spec ticket. Run its complete implementation graph unattended.
 This session is the **orchestrator**: it reads tracker state, delegates one ticket per agent,
 controls integration, and advances the dependency frontier. It never implements or reviews
 application code itself.
 
-## Contents
-
-This file is the orchestrator's workflow. Each subagent gets its own brief in `references/`.
-Paths are relative to this skill's folder; give agents the absolute path, built from the folder
-shown when this skill loaded.
-
-| Section or file | Read by | When |
-|---|---|---|
-| 1. Establish the run | orchestrator | start |
-| 2. Generate the graph | orchestrator | start |
-| [references/graph-discovery.md](references/graph-discovery.md) | graph subagent | step 2 |
-| 3. Track the frontier | orchestrator | whole run |
-| 4. Implement the frontier | orchestrator | each frontier |
-| [references/worker-brief.md](references/worker-brief.md) | each worker | step 4 |
-| 5. Integrate through the merge queue | orchestrator | each finished ticket |
-| [references/integrator-brief.md](references/integrator-brief.md) | each integrator | step 5 |
-| Failure boundaries | orchestrator | on any failure |
-| [references/human-steps.md](references/human-steps.md) | orchestrator | a precondition only the user can meet |
-| Keep the orchestrator context small, Completion, Publish | orchestrator | end of run |
+Each subagent gets its own brief in `references/`. Paths are relative to this skill's folder;
+give agents the absolute path, built from the folder shown when this skill loaded.
 
 Terms used throughout:
 
@@ -62,10 +39,8 @@ Terms used throughout:
 3. Create the **integration worktree**, where every merge of this run happens:
    `git worktree add <worktree-folder>/spec-<SPEC-ID> <parent-branch>` (see Worktrees). Git
    refuses when the parent branch is checked out in another folder, usually the repository root.
-   Then run `git -C <that folder> switch --detach` without asking: it keeps the same commit, files
-   and uncommitted edits, and only stops that folder from following the branch, so this run's
-   merges never land under other work. Say so in one status line, and create the integration
-   worktree. The worktree folder rules (see Worktrees) apply from this first worktree on.
+   Then run `git -C <that folder> switch --detach` without asking, say so in one status line, and
+   create the integration worktree. The worktree folder rules (see Worktrees) apply from this first worktree on.
 4. Read the tracker instructions.
 5. Fetch the full spec ticket, including comments or notes.
 6. When the tracker claims by assignee, record your tracker username, so the frontier can tell
@@ -176,8 +151,7 @@ never committed) before creating the first worktree.
 
 Finished tickets enter a merge queue: one merge at a time, in ascending ticket number.
 
-Integration is mechanical, so it runs in a **fresh context**. The worker already holds 150k–500k
-tokens, and every integration turn would resend all of it. Spawn one new integrator agent per
+Integration is mechanical, so it runs in a **fresh context**. Spawn one new integrator agent per
 ticket. Give it the integration worktree, the integrated HEAD, the ticket branch, the worker's
 hand-back, the tracker instructions, and the path of `references/integrator-brief.md` as its brief.
 
@@ -235,7 +209,7 @@ remaining blocker.
 
 ## Publish
 
-Pushing is outward-facing, so ask the user how the work goes out: (a) a branch and a merge
+Ask the user how the work goes out: (a) a branch and a merge
 request (pull request) into the parent branch, or (b) a direct push. Before asking, list
 `git log <remote>/<parent>..HEAD` and name every commit this run did not make. A local commit the
 user is holding back would otherwise ride along.
