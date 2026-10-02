@@ -4,31 +4,28 @@ How the orchestrator runs code review, when it stops, and what it emits.
 
 ## Review sub-agent pattern
 
-All review passes use a **dedicated review sub-agent** invoking the `code-review` skill.
-Review is **never** performed inline in the orchestrator.
-
-Rationale: isolating review in a sub-agent keeps orchestrator context clean and reuses the
-battle-tested, high-confidence review logic already embedded in the `code-review` skill.
+Every review pass runs in its own review sub-agent that invokes the `code-review` skill. The
+orchestrator does not review code itself.
 
 ---
 
-## Cycle-by-cycle description (hard cap: 2 fix-and-review cycles)
+## Cycles (at most 2 fix-and-review cycles)
 
-A maximum of **3 review passes** can run in total (initial + 2 fix-and-review cycles).
+At most 3 review passes run: the first review plus 2 fix-and-review cycles.
 
 | Pass | Name | What happens |
 |---|---|---|
 | Pass 0 | Initial review | Review sub-agent runs against the specialist output. |
 | Pass 1 | First fix cycle | If actionable findings exist, a targeted fix prompt is sent to the specialist (limited to those findings). Review sub-agent runs again. |
-| Pass 2 | Second fix cycle | If actionable findings still exist, one more targeted fix and one more review run. Findings left after this review are unresolved; the loop **stops**. |
+| Pass 2 | Second fix cycle | If actionable findings still exist, one more targeted fix and one more review run. Findings left after this review are unresolved and the loop stops. |
 
 The loop also exits early when any review pass returns zero actionable findings.
 
 ---
 
-## Actionable finding criteria (all three gates must be satisfied)
+## Actionable findings
 
-A finding is **actionable** only when it meets **all** of the following:
+A finding is actionable when it meets all three:
 
 1. **Concrete defect** — must be a bug, broken build, failing test, or security issue.
    Vague concerns ("this could be better") do not qualify.
@@ -53,14 +50,6 @@ When the loop ends with **unresolved actionable findings** (either after cycle 2
 
 When the loop exits cleanly (no unresolved findings), the lane keeps its status from the
 specialist's report.
-
----
-
-## `--skip-code-review` bypass
-
-When `--skip-code-review` is present, the entire review loop is bypassed.
-Lane status is taken directly from the specialist's report.
-`review_outcome` in the run summary is set to `"skipped"`.
 
 ---
 

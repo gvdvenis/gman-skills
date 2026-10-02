@@ -3,6 +3,7 @@ name: implement-spec-tickets
 description: Implements every ticket belonging to one spec by discovering its dependency graph, dispatching parallel worktree agents, and coordinating merge and closure until the full spec is complete.
 disable-model-invocation: true
 argument-hint: "<SPEC-TICKET-ID or spec folder>"
+# written for: Opus 5.5 / Sonnet 5.5; not tested on Haiku
 ---
 
 # Implement Spec Tickets
@@ -14,6 +15,19 @@ application code itself.
 
 Each subagent gets its own brief in `references/`. Paths are relative to this skill's folder;
 give agents the absolute path, built from the folder shown when this skill loaded.
+
+Copy this checklist into the first status message and tick lines as they finish:
+
+- [ ] 1 Run established
+- [ ] 2 Graph validated and frozen; preconditions met or parked
+- [ ] 3 Frontier table built
+- [ ] 4 Frontier claimed and dispatched
+- [ ] 5 Each finished ticket merged and closed, or its failure sent back
+- [ ] Completion: full suite passed on the final integrated HEAD
+- [ ] Publish
+
+After every merge in step 5, go back to step 3: recompute the frontier and dispatch it. Move to
+Completion only when no ticket is pending, implementing or integrating.
 
 Terms used throughout:
 
@@ -77,7 +91,8 @@ human step.
 
 ## 3. Track the frontier
 
-Persist one row per implementation ticket:
+Keep one row per implementation ticket in `frontier.md` in the session's scratchpad folder, and
+rewrite it after every state change:
 
 ```text
 ticket | blockers | state | claimed | agent | worktree | branch | commit | integrated | closed | note
@@ -145,7 +160,9 @@ never committed) before creating the first worktree.
 - The orchestrator creates it, serially, from the integrated HEAD:
   `git worktree add -b agent/spec-<SPEC-ID>-ticket-<ID> <worktree-folder>/ticket-<ID> <integrated-HEAD>`.
 - The branch outlives the worktree. After a verified merge, remove both. After `blocked` or
-  `failed`, remove the worktree, keep the branch, and name it in the claim-release note.
+  `failed`, remove the worktree, keep the branch, and name it in the claim-release note. Remove
+  a worktree with `git worktree remove <worktree-folder>/ticket-<ID>`; without `--force`, git
+  refuses when it still holds changes.
 
 ## 5. Integrate through the merge queue
 
@@ -159,7 +176,8 @@ When the integrator reports a failed merge or failing tests, the parent branch i
 integrated HEAD. Send the failure to the original worker as its one focused follow-up.
 
 Otherwise, independently verify the merge commit (its two parents) and the closed ticket. Then
-mark the node `closed`, record the new integrated HEAD, remove its worktree, delete its local
+mark the node `closed`, record the new integrated HEAD, remove its worktree
+(`git worktree remove <worktree-folder>/ticket-<ID>`), delete its local
 branch (confirm with `git merge-base --is-ancestor <branch> <parent-branch>`, then
 `git branch -D`; plain `-d` compares against the detached checkout and refuses), recompute the frontier, and dispatch newly eligible tickets immediately. A dependent does
 not wait for unrelated ready tickets once all of its own blockers are closed.
@@ -219,5 +237,6 @@ user is holding back would otherwise ride along.
   when the merge-request pipeline only builds Debug.
 - When the pipeline finishes, check each job and post its evidence on every ticket whose deferred
   proof it settles. Name the pipeline ID.
-- After the push, remove the integration worktree. The user sees the result by checking out the
+- After the push, remove the integration worktree
+  (`git worktree remove <worktree-folder>/spec-<SPEC-ID>`). The user sees the result by checking out the
   parent branch.

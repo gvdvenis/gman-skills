@@ -60,6 +60,16 @@
       "type": "array",
       "description": "Present when final_status is partial or blocked: what the user must do next.",
       "items": { "type": "string" }
+    },
+    "classifier_override": {
+      "type": "object",
+      "description": "Present when the route departs from references/routing-classifier.md.",
+      "required": ["reason", "original_decision", "actual_decision"],
+      "properties": {
+        "reason": { "type": "string" },
+        "original_decision": { "enum": ["inline", "delegate", "parallel"] },
+        "actual_decision": { "enum": ["inline", "delegate", "parallel"] }
+      }
     }
   }
 }

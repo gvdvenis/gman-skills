@@ -67,4 +67,6 @@ a credential, or a check on their own machine.
 
 ## Before sending
 
-Re-read the message as the user, once.
+Re-read the message as the user, once. Done when every question round opens with a scene,
+every question has an example, every word is one the user knows, and a message that waits on
+the user ends with the one thing they must do. Fix what fails, then re-read once more.

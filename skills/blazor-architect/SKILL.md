@@ -3,9 +3,24 @@ name: blazor-architect
 description: Routes a Blazor work request that spans more than one concern (authoring, data, auth, review) across specialist lanes, then reviews the result.
 disable-model-invocation: true
 argument-hint: "<task> [--skip-code-review] [--self-improve]"
+# written for: Opus 5.5 / Sonnet 5.5; not tested on Haiku
 ---
 
 # Blazor architect skill
+
+Copy this checklist into your first reply and tick each line as you finish it:
+
+- [ ] 1 Announce the run
+- [ ] 2 Parse the invocation
+- [ ] 3 Route the work
+- [ ] 4 Execute the work (every lane report valid)
+- [ ] 5 Review gate
+- [ ] 6 Write and check analysis.json
+- [ ] 7 Self-improvement (only with `--self-improve`)
+- [ ] 8 Print the run summary
+
+When the review loop sends fixes to a lane, go back to step 4 for that lane, then run step 5
+again.
 
 ## Step 1 — Announce the run
 
@@ -67,13 +82,15 @@ failure, mark the lane `failed_report_schema` and keep the raw output.
 ## Step 5 — Review gate
 
 After all lanes finish. With `skip_code_review`: start no review agent and set `review_outcome`
-to `"skipped"`. Otherwise run the loop in `references/review-loop-contract.md`. The review
-sub-agent runs `code-review` (`mattpocock-skills:code-review` in Claude Code).
+to `"skipped"`; each lane keeps its status from its report. Otherwise run the loop in
+`references/review-loop-contract.md`. The review sub-agent runs `code-review` (`mattpocock-skills:code-review` in Claude Code).
 
 ## Step 6 — Write analysis.json
 
 Write `~/.self-improve-reports/blazor-architect/runs/<run_id>/analysis.json` to match
-`references/analysis-schema.json`. Create the folder when missing.
+`references/analysis-schema.json`. Create the folder when missing. Read the file back and check
+it against the schema: every `required` key is present and every `enum` value is allowed. Fix
+what fails and check again.
 
 ## Step 7 — Self-improvement
 

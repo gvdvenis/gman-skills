@@ -50,9 +50,6 @@ Setup does two things:
    and extracts it to `~/.copilot/gman-skills/bin/`. The binary is the local C# server that
    `self-improve` auto-launches to serve the improvement report UI.
 
-Idempotent preflight scripts (`check-deps.ps1` / `check-deps.sh`) warn on missing components
-without blocking.
-
 ## Skills overview
 
 | Skill | Description | User-invocable |

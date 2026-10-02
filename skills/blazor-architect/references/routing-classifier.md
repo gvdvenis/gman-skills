@@ -22,7 +22,7 @@ decisions — token-control and context isolation are core package goals.
 
 ## Parallel fan-out
 
-Parallel fan-out is allowed only when **both** conditions are met:
+Parallel fan-out is allowed only when both conditions are met:
 
 1. The selected lanes are independent (no shared file writes, no ordering dependency).
 2. Each lane is expected to save ≥ 1 full specialist turn compared to serial execution.

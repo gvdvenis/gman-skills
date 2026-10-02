@@ -127,7 +127,7 @@ reports have been validated and the review loop has completed.
 1.  Collect all self_diagnosis.issues entries from all specialist reports in the run.
 2.  Map each issue to a raw finding: { specialist, issue_index, title, summary, category,
     severity, expected_impact, prompt_fragment, evidence: [{ specialist, issue_index }] }
-    Severity comes from the self_diagnosis report; do NOT compute it here.
+    Take severity from the self_diagnosis report as is.
 3.  Derive each raw finding's suggestion_key (see suggestion_key derivation).
 4.  Load suggestion-history.json (see Cross-run dedup fold rules); skip silently if absent or
     unreadable.
@@ -135,8 +135,8 @@ reports have been validated and the review loop has completed.
 6.  Fold the rest by suggestion_key (see Cross-run dedup fold rules).
 7.  Compute ranking_score and sort (see Ranking formula).
 8.  Assign sequential ids (f-001, f-002, ...) in sort order.
-9.  Write improvement-report-data.json to the run directory in the shape shown in the
-    self-improve SKILL.md, step 1: generated_at is now, origin comes from the current run,
+9.  Write improvement-report-data.json to the run directory matching
+    improvement-report-data-schema.json: generated_at is now, origin comes from the current run,
     findings from step 8.
 ```
 

@@ -2,6 +2,7 @@
 name: setup-gman-skills
 description: First-time setup for gman-skills. Installs the dotnet-blazor plugin and downloads the report-server binary when either is missing.
 disable-model-invocation: true
+# written for: Opus 5.5 / Sonnet 5.5; not tested on Haiku
 ---
 
 # setup-gman-skills
@@ -22,8 +23,14 @@ that the plugin's skills load in the next session.
 ## Step 2 — report-server binary
 
 Look for `~/.copilot/gman-skills/bin/report-server.exe` (Windows) or `report-server`
-(Linux/macOS). When missing, run `scripts/setup-report-server.ps1` (Windows) or
-`scripts/setup-report-server.sh`. Status: `downloaded`, `present`, or `failed` with the error.
+(Linux/macOS). When missing, run the script from this skill's folder (shown when this skill
+loaded):
+
+- Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File <skill-folder>/scripts/setup-report-server.ps1`
+- Linux/macOS: `bash <skill-folder>/scripts/setup-report-server.sh` (needs `curl` and `unzip`)
+
+When no release fits, both build from `src/report-server`, which needs the .NET SDK.
+Status: `downloaded`, `present`, or `failed` with the error.
 
 ## Step 3 — Summary
 
