@@ -6,11 +6,11 @@
 .scratch/
 !skills/*/evals/fixtures/**/.scratch/
 
-# Playwright MCP snapshots (smoke test artifacts)
-.playwright-mcp/
+# Playwright CLI snapshots (smoke test artifacts)
+.playwright-cli/
 
 # Eval / workspace
-skills/blazor-architect-workspace/
+*-workspace/
 
 # npx skills project-level install (we install globally, not in-repo)
 .agents/
