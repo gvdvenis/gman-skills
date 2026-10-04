@@ -7,7 +7,9 @@
       "name": "linear-chain-runs-in-order",
       "prompt": "/implement-spec-tickets .scratch/chain",
       "expected_output": "Three waves (01, then 02, then 03), each ticket merged and closed before the next one starts. NOTES.md ends with alpha, beta, gamma in that order.",
-      "files": ["evals/fixtures/repo"],
+      "files": [
+        "evals/fixtures/repo"
+      ],
       "expectations": [
         "The printed dependency map has the edges 01 -> 02 and 02 -> 03 and three waves of one ticket each",
         "Ticket 02 is dispatched only after ticket 01 shows a verified merge on main and Status: closed",
@@ -17,14 +19,17 @@
         "main has three --no-ff merge commits, each with the ticket number in its message",
         "NOTES.md ends with the lines alpha, beta, gamma in that order",
         "The spec stays open, and the run ends with a hand-off note on the spec and a one-sentence /clear suggestion"
-      ]
+      ],
+      "kind": "end-to-end"
     },
     {
       "id": 2,
       "name": "fan-in-runs-independent-tickets-in-parallel",
       "prompt": "/implement-spec-tickets .scratch/fan-in",
       "expected_output": "Wave 1 holds 01 and 02, dispatched together; wave 2 holds 03. The second merge of wave 1 has a mechanical conflict on NOTES.md that the integrator resolves by keeping both lines.",
-      "files": ["evals/fixtures/repo"],
+      "files": [
+        "evals/fixtures/repo"
+      ],
       "expectations": [
         "The printed dependency map has the edges 01 -> 03 and 02 -> 03, with 01 and 02 in wave 1 and 03 in wave 2",
         "The workers for 01 and 02 are spawned in the same turn",
@@ -32,20 +37,136 @@
         "The NOTES.md conflict is resolved by keeping both red and blue, not by aborting the merge",
         "Ticket 03 is dispatched from the integrated HEAD that contains both earlier merges",
         "NOTES.md contains red and blue, and purple after both"
-      ]
+      ],
+      "kind": "end-to-end"
     },
     {
       "id": 3,
       "name": "backlink-without-parent-is-excluded",
       "prompt": "/implement-spec-tickets .scratch/backlink",
       "expected_output": "Only ticket 01 is implemented. Ticket 02 appears under excluded references, because it mentions the spec but declares no parent.",
-      "files": ["evals/fixtures/repo"],
+      "files": [
+        "evals/fixtures/repo"
+      ],
       "expectations": [
         "The graph lists 02-research.md under excluded references, with the reason that it has no ## Parent section",
         "No worker, worktree or branch is created for ticket 02",
         "Ticket 02 keeps Status: open and NOTES.md has no line added for it",
         "Ticket 01 is merged and closed, and NOTES.md contains the line one"
+      ],
+      "kind": "end-to-end"
+    },
+    {
+      "id": 4,
+      "kind": "dry-run",
+      "name": "suite-failure-measures-before-fixing",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s1-suite-failure.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Reruns only the failing test twice, checks the starting HEAD, bisects only a repeating failure introduced by the run, briefs the fix worker with measured facts only, merges the fix through an integrator, and ticks every deferred-proof box once the suite passes.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s1-suite-failure.md"
+      ],
+      "expectations": [
+        "Before any fix agent or bisect, reruns ONLY the failing test(s) (not the full suite), at least twice, on the final integrated HEAD.",
+        "Handles the flaky branch: if the reruns pass, it does not dispatch a fix; it records the flaky test as a follow-up/note.",
+        "Checks whether the failure also happens on the starting HEAD (b0ccf14) before or instead of bisecting; if it does, skips the bisect.",
+        "The fix agent's prompt contains only measured facts (test name, output, rerun/bisect results) and does NOT list unmeasured suspects such as trimming, JSON/deserialisation, ICU, Newtonsoft.",
+        "The fix is merged by an integrator agent (not merged by the orchestrator itself), with build + tests.",
+        "When no merge of this run caused the failure, the fix commit / note is attributed to the spec (#151), not to #154.",
+        "After the suite passes, posts the result AND ticks the deferred-proof box on #152, #153 and #154 (all three)."
+      ]
+    },
+    {
+      "id": 5,
+      "kind": "dry-run",
+      "name": "memory-kill-reruns-once",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s2-memory-kill.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Stops the build servers and reruns the suite once in a fresh agent without waiting for the user; a second kill posts the hand-off note and stops.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s2-memory-kill.md"
+      ],
+      "expectations": [
+        "Does not stop to wait for the user after the first kill.",
+        "Stops the dotnet build servers (e.g. `dotnet build-server shutdown`) before rerunning.",
+        "Reruns the suite once, in a fresh agent.",
+        "On a second kill: posts a hand-off note on the spec and stops (no third attempt, no indefinite wait)."
+      ]
+    },
+    {
+      "id": 6,
+      "kind": "dry-run",
+      "name": "publish-settles-every-proof",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s3-publish.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Ticks deferred proofs on tickets closed in earlier runs too, offers the doc follow-up before the publish question, names unmet criteria per option, pushes once, waits for the pipeline, and cleans up the worktree, build servers and detached root.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s3-publish.md"
+      ],
+      "expectations": [
+        "Posts the suite result AND ticks the deferred-proof box on #152 and #153 (closed in an earlier run), not only #154.",
+        "Before asking how to publish, offers to apply the AGENTS.md follow-up so it goes out in the same push.",
+        "The publish question names, per option, which acceptance criterion it leaves unmet (#154 \"merge request says the local -AsShipped run passed\" stays unmet under direct push).",
+        "Names b0ccf14 as a commit this run did not make.",
+        "Uses a single push (no second push after the first).",
+        "Waits for pipeline 2909798105 to finish and checks its jobs before ending the run.",
+        "Cleanup: stops build servers, removes the integration worktree, and switches the root folder back to main."
+      ]
+    },
+    {
+      "id": 7,
+      "kind": "dry-run",
+      "name": "start-lists-unpushed-and-posts-substitute",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s4-start.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Names the unpushed commit at step 1, leaves feed research to graph discovery, and posts the substitute for the impossible criterion on the spec at once.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s4-start.md"
+      ],
+      "expectations": [
+        "Lists the unpushed commit b0ccf14 at the start of the run and asks about it before doing work.",
+        "The orchestrator does not research the package feed/host or read child tickets itself; leaves that to graph discovery.",
+        "Handles the impossible criterion (missingPrices dropped): picks a substitute criterion AND posts it on the spec immediately as an open decision, then continues.",
+        "The worker prompt has the corrections under their own heading (including the GitLab registry move and the missingPrices drop)."
+      ]
+    },
+    {
+      "id": 8,
+      "kind": "dry-run",
+      "name": "worker-uses-review-skill-and-waits",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s5-worker.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Calls the code-review skill instead of a home-made reviewer and waits for its long test run inside the turn.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s5-worker.md"
+      ],
+      "expectations": [
+        "Runs the review by invoking the `mattpocock-skills:code-review` skill (Skill tool), not by spawning its own review agent.",
+        "Waits for the 9-minute test run in the foreground (e.g. an until-loop / blocking wait), not by ending the turn while the background command runs.",
+        "Does not end any turn while one of its own background commands is still running.",
+        "Runs affected tests only (filtered), not the full suite.",
+        "Hand-back follows the brief's format."
+      ]
+    },
+    {
+      "id": 9,
+      "kind": "dry-run",
+      "name": "waiting-turns-and-frontier",
+      "prompt": "Read evals/scenarios/common.md, then evals/scenarios/s6-waiting.md, and follow them. SKILL_DIR = <this skill folder>.",
+      "expected_output": "Ends waiting turns with \"waiting on <agent>\", integrates through a fresh integrator, and rewrites the frontier file after the merge.",
+      "files": [
+        "evals/scenarios/common.md",
+        "evals/scenarios/s6-waiting.md"
+      ],
+      "expectations": [
+        "Turn 1 and turn 2 each end with one short line of the form \"waiting on <agent>\" (not empty text, not a long status).",
+        "Turn 3 spawns a fresh integrator agent with the integrator brief.",
+        "Turn 4 verifies the merge commit's two parents and the closed ticket itself.",
+        "Turn 4 rewrites the frontier file (frontier.md) with the closed state and new integrated HEAD.",
+        "The frontier file location is defined even though there is no scratchpad folder.",
+        "Turn 4 removes the ticket worktree and deletes its branch after `merge-base --is-ancestor`."
       ]
     }
-  ]
+  ],
+  "dry_run_setup": "Dry-run evals need no repository. Give the agent this skill folder as SKILL_DIR and tell it to read evals/scenarios/common.md and then the eval's scenario file, and to write its planned actions to a file. Grade the answers blind against the expectations. Compare with the previous skill version (git show HEAD:...) as the baseline."
 }

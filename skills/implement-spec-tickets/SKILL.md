@@ -50,6 +50,9 @@ Terms used throughout:
    project memory can name a long-lived effort branch (for example `feature/<name>`); use that
    over the default branch. Search both before choosing, and ask once when they disagree with
    the checked-out branch.
+   List `git log <remote>/<parent-branch>..<starting-HEAD>`. Those commits go out with this run
+   and cannot be left out later, so when the list is not empty, name each one and ask once
+   whether the run may build on them.
 3. Create the **integration worktree**, where every merge of this run happens:
    `git worktree add <worktree-folder>/spec-<SPEC-ID> <parent-branch>` (see Worktrees). Git
    refuses when the parent branch is checked out in another folder, usually the repository root.
@@ -65,7 +68,8 @@ username and integration worktree are known.
 
 ## 2. Generate the graph in a subtask
 
-Launch one graph-discovery subagent and wait for its result before step 3. Give it the spec reference, the repository root,
+Launch one graph-discovery subagent and wait for its result before step 3. The orchestrator
+reads no ticket and researches no package feed or host itself; graph discovery covers both. Give it the spec reference, the repository root,
 the tracker instructions, and the path of `references/graph-discovery.md` as its brief. It
 returns the dependency map, the waves, a node table, the paths of the ticket files it wrote, and
 the **corrections**: facts in tickets that contradict the spec.
@@ -86,13 +90,17 @@ against the corrections and against this machine, before the first dispatch. A p
 user must meet goes to them as a **human step** (see `references/human-steps.md`). Frontier
 tickets that do not need it start meanwhile.
 
+When a correction makes an acceptance criterion impossible (for example, the field it checks was
+removed from the package), pick a substitute criterion, post it on the spec at once as an open
+decision with the correction as its reason, and continue with the substitute.
+
 **Complete when** the graph is printed and frozen, and every precondition is met or parked as a
 human step.
 
 ## 3. Track the frontier
 
-Keep one row per implementation ticket in `frontier.md` in the session's scratchpad folder, and
-rewrite it after every state change:
+Keep one row per implementation ticket in `frontier.md` in the session's scratchpad folder
+(without one: `<worktree-folder>/frontier-<SPEC-ID>.md`), and rewrite it after every state change:
 
 ```text
 ticket | blockers | state | claimed | agent | worktree | branch | commit | integrated | closed | note
@@ -176,7 +184,7 @@ When the integrator reports a failed merge or failing tests, the parent branch i
 integrated HEAD. Send the failure to the original worker as its one focused follow-up.
 
 Otherwise, independently verify the merge commit (its two parents) and the closed ticket. Then
-mark the node `closed`, record the new integrated HEAD, remove its worktree
+mark the node `closed` and record the new integrated HEAD in `frontier.md`, remove its worktree
 (`git worktree remove <worktree-folder>/ticket-<ID>`), delete its local
 branch (confirm with `git merge-base --is-ancestor <branch> <parent-branch>`, then
 `git branch -D`; plain `-d` compares against the detached checkout and refuses), recompute the frontier, and dispatch newly eligible tickets immediately. A dependent does
@@ -204,9 +212,11 @@ worker.
 ## Keep the orchestrator context small
 
 - A task-notification that only says an agent has not reported yet is not news: end the turn
-  without text. A turn that dispatches, merges or closes is news: it ends with one status line.
+  with one line, `waiting on <agent>`. A turn that dispatches, merges or closes is news: it ends with one status line.
 - At the end of Completion, post the open decisions, corrections and follow-ups as a note on the
-  spec ticket. After Publish, add the publish state to that note, then tell the user in one
+  spec ticket. After Publish, add the publish state to that note (for ticket files in the
+  repository: write the chosen route into the note before the push, so it goes out in that
+  push), then tell the user in one
   sentence to /clear and continue from it. A run that stops for a human step posts the same note first, since a restart loses this
   context.
 
@@ -216,27 +226,57 @@ Continue until every child ticket is either verified merged and closed or was al
 the run. Run the full suite once on the final integrated HEAD (when the repository has none, say so in
 the final report), in the strictest variant any
 acceptance criterion names (for example a release or as-shipped build; a stricter variant usually
-covers the plain one). If it fails, find the merge that broke it with
-`git bisect start --first-parent <final-HEAD> <starting-HEAD>` and `git bisect run <failing tests>`
-(Git 2.29+), and give that fix to a fresh agent. Post the passing result on every ticket whose
-deferred proof it settles. Leave the parent spec open unless the tracker instructions explicitly
-require closing it.
+covers the plain one).
+
+When the machine kills the suite (out of memory, not a failing test), stop the build servers
+(.NET: `dotnet build-server shutdown`) and rerun it once in a fresh agent. Killed again: post
+the hand-off note on the spec and stop.
+
+When tests fail, measure before fixing:
+
+1. Rerun only the failing tests, twice, on the final integrated HEAD, in the suite's variant (the
+   as-shipped build, not a plain `dotnet test`). A test that passes both
+   reruns is flaky: post it on the spec as a follow-up, with the three results, and count the
+   suite as passed.
+2. Run a repeating failure once on the starting HEAD, in a throwaway worktree
+   (`git worktree add --detach <worktree-folder>/start-<SPEC-ID> <starting-HEAD>`), so the
+   integration worktree stays on the parent branch. Failing there too, it predates this run:
+   skip the bisect.
+3. Otherwise find the merge that broke it with
+   `git bisect start --first-parent <final-HEAD> <starting-HEAD>` and
+   `git bisect run <failing tests>` (Git 2.29+).
+
+Give the fix to a fresh worker (see step 4) in a new worktree from the final integrated HEAD. Its
+ticket is the one the bisect named; when the bisect named none, it is the spec, so the commit
+says `(#<SPEC-ID>)` and the integrator posts on the spec. Its prompt holds measured facts only:
+the failing tests, their output, the rerun results and the bisect result. Leave out unmeasured
+suspects; an agent spends its time ruling them out. The fix branch goes through an integrator
+(step 5) like any ticket.
+
+Once the suite passes, post the result **and tick the box** on every ticket in the graph whose
+deferred proof it settles, including tickets closed before this run. Leave the parent spec open
+unless the tracker instructions explicitly require closing it.
 
 Finish with the dependency map, per-ticket final state, merge SHAs, full-suite result, and any
 remaining blocker.
 
 ## Publish
 
-Ask the user how the work goes out: (a) a branch and a merge
-request (pull request) into the parent branch, or (b) a direct push. Before asking, list
-`git log <remote>/<parent>..HEAD` and name every commit this run did not make. A local commit the
-user is holding back would otherwise ride along.
+Everything goes out in one push, because each new push cancels the pipeline of the one before.
+First offer to apply the doc follow-ups from the hand-backs in a commit on the integrated HEAD.
+
+Then ask the user how the work goes out: (a) a branch and a merge request (pull request) into the
+parent branch, or (b) a direct push. Name the commits step 1 listed again. For each option, name
+every acceptance criterion it leaves unmet, for example "#154: the merge request states the
+local as-shipped run passed" stays unmet under (b).
 
 - Push with `git push origin HEAD:<branch>`. Plain `-u` would move the local branch's upstream.
 - The merge request states whatever its pipeline cannot prove, such as a local release-build run
   when the merge-request pipeline only builds Debug.
-- When the pipeline finishes, check each job and post its evidence on every ticket whose deferred
-  proof it settles. Name the pipeline ID.
-- After the push, remove the integration worktree
-  (`git worktree remove <worktree-folder>/spec-<SPEC-ID>`). The user sees the result by checking out the
-  parent branch.
+- Wait for the pipeline of that push before ending the run: poll its status in an until-loop (in
+  Claude Code, through the Monitor tool). Check each job, then post its
+  evidence and tick the box on every ticket whose deferred proof it settles. Name the pipeline ID.
+- Clean up: stop the build servers (they hold files open, and `git worktree remove` then fails
+  with "Permission denied"), run `git worktree remove <worktree-folder>/spec-<SPEC-ID>`, and run
+  `git -C <root> switch <parent-branch>` in the folder step 1 detached. Delete `frontier.md` when
+  it lives in the worktree folder.

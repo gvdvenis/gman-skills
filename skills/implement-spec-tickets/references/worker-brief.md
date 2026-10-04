@@ -33,11 +33,19 @@ integration worktree belong to the integrator.
 - **Review gate.** List changed files with `git diff --name-only <base>...HEAD`.
   - Skip review when every file is a test, doc, fixture, sample data, CI file or generated file.
     Report `review: skipped (<reason>)`.
-  - Otherwise run `mattpocock-skills:code-review` against `<base>`; when that skill is not
-    installed, spawn one read-only review agent on the diff and the ticket. Project files
+  - Otherwise call `Skill(skill: "mattpocock-skills:code-review", args: "<base>")`. Spawn your
+    own read-only review agent on the diff and the ticket only when that skill is missing from
+    your skill list. Project files
     (`.csproj`, `package.json`) and build scripts count as production code. Tell the reviewers
     they are read-only: they read the diff and the ticket, and run no build or test. Fix real
     findings, then rerun the affected tests.
+- **Wait inside the turn.** Start a long build or test so it writes its exit code when done,
+  with its files in the temp folder, outside the repository:
+  `(<command> > "$TMP/t<ID>.log" 2>&1; echo $? > "$TMP/t<ID>.exit") &`. Then wait on that file
+  with `until [ -f "$TMP/t<ID>.exit" ]; do sleep 30; done` (in Claude Code, run it through the
+  Monitor tool; repeat the wait when it times out), and read `tail -40 "$TMP/t<ID>.log"`. End a
+  turn only after every background command you started has finished; each one still running
+  sends the orchestrator a notification.
 - **Secrets stay with the user.** Work only with credentials already in the process environment.
   When a step needs one that is missing, stop and report it as a blocker.
 - **Commit** with the ticket number in the message.

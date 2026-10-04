@@ -19,4 +19,6 @@ hand-back (test command, summary, acceptance-criteria state) and the tracker ins
 6. Post the worker's summary and final acceptance-criteria state on the ticket, then close it,
    both the way the tracker instructions describe (for ticket files: already done in step 5).
    Each deferred proof stays an unticked box that names the run that will prove it.
+   When your ticket is the spec itself (a completion fix that no ticket caused), post the
+   summary on the spec and leave it open.
 7. Return the merge SHA, the test result and the closure evidence in at most 15 lines.
