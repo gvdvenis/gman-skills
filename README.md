@@ -50,6 +50,15 @@ Setup does two things:
    and extracts it to `~/.copilot/gman-skills/bin/`. The binary is the local C# server that
    `self-improve` auto-launches to serve the improvement report UI.
 
+## Requirements
+
+The `vsreview` skill is a Firstmate helper and needs:
+
+- [Firstmate](https://github.com/kunchenguid/firstmate). The skill reads its task records. It finds the Firstmate home from `$FM_HOME`, else the current folder or a parent, else `~/firstmate`. Without Firstmate it says so and stops.
+- VS Code with the `code` command on PATH. On WSL, if `code` is missing but VS Code is installed on Windows, the skill tells you which folder to add to PATH; if VS Code is not installed, install it on Windows first.
+
+The other skills do not need either.
+
 ## Skills overview
 
 | Skill | Description | User-invocable |
@@ -58,6 +67,7 @@ Setup does two things:
 | `self-improve` | Loaded by `blazor-architect` when `--self-improve` is active. Handles improvement report generation (algorithm, dedup, ranking), report-server auto-launch on port 5173, and CLI staging readiness. | No |
 | `setup-gman-skills` | First-time setup: installs the dotnet-blazor plugin dependency and downloads the report-server binary from GitHub Releases. Run once after installing the plugin or `npx skills add`. | Yes |
 | `implement-spec-tickets` | Implement every ticket of one spec: discovers its dependency graph, dispatches parallel worktree agents, and coordinates merge and closure. Invoke as `/implement-spec-tickets <SPEC-TICKET-ID>`, or with a spec folder on a local markdown tracker. | Yes |
+| `vsreview` | Firstmate helper skill: opens a finished crewmate task in VS Code (a ship's local copy on its branch, or a scout's report) and says what to review and where to start. `/vsreview [task-id]`; a part of an id works (`/vsreview mainthread`), and an unclear id lists the candidate tasks with their backlog titles. Requires Firstmate and VS Code (see Requirements). | Yes |
 | `use-plain-language` | Plain-language rules for everything written to the user, with extra rules for question rounds, proposed names and hand-backs. The plugin's session-start hook loads it in every session (Claude Code and Copilot CLI). | No (loaded by the hook) |
 
 ## Dev workflow
