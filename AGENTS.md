@@ -10,6 +10,7 @@ manifests and `npx skills` read it:
 - `skills/self-improve/` - self-improvement report skill (loaded by blazor-architect, not user-invocable).
 - `skills/setup-gman-skills/` - first-time dependency + binary bootstrap skill (user-invocable).
 - `skills/implement-spec-tickets/` - implements every ticket of one spec with parallel worktree agents (user-invocable).
+- `skills/vsreview/` - Firstmate helper: opens a finished crewmate task in VS Code (user-invocable). Test: `tests/vsreview/run-vsreview-test.sh`.
 - `skills/use-plain-language/` - plain-language rules, loaded at every session start by the plugin hook (not invocable).
 - `src/report-server/` - C# report-server source, built and published to GitHub Releases.
   The binary is never committed; it is downloaded by `setup-gman-skills` to `~/.copilot/gman-skills/bin/`.
