@@ -18,8 +18,8 @@ Plain language changes the wording only. Keep every detail and every recommendat
   command itself.
 - Define a term of art in the sentence where it first appears. Name things by what they
   measure, in ordinary words.
-- Use words the user has used or `CONTEXT.md` defines. Where a new term seems needed, say what
-  the code does instead.
+- Use words the user has used or the project glossary defines (`GLOSSARY.md`, or `CONTEXT.md`
+  in older projects). Where a new term seems needed, say what the code does instead.
 - Add an example where a description alone is hard to follow: an architecture decision, a new
   concept, or a change in code flow. For a code-flow change, show the call tree before and after:
 
@@ -52,8 +52,8 @@ When no question-asking skill is running, also number every question, spell out 
 ## Names
 
 When something needs a new name (glossary term, class, folder, build flag), propose it with
-the current name and a one-line meaning beside it, then wait. The name goes into `CONTEXT.md`,
-code or a file once the user picks it.
+the current name and a one-line meaning beside it, then wait. The name goes into the glossary
+(`GLOSSARY.md`, or `CONTEXT.md` in older projects), code or a file once the user picks it.
 
 ## Hand-back
 
